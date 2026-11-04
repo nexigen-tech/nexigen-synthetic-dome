@@ -1,0 +1,25 @@
+openspec_version: "1.0"
+project:
+  name: "Nexigen Synthetic Dome"
+  id: "nxd"
+  description: >
+    A high-fidelity Hardware-in-the-Loop (HIL) synthetic environment 
+    powered by iceoryx2 for zero-copy, real-time simulation.
+  version: "0.1.0-alpha"
+
+# Архитектурные домены (Сектора Купола)
+domains:
+  - name: "chronos"     # Сердце Купола: Время и Синхронизация
+    description: "Global simulation time distribution and state control (Pause/Step)"
+  
+  - name: "avionics"    # Бортовые интерфейсы
+    description: "MIL-STD-1553 (MKIO) and ARINC-429 simulation gateways"
+  
+  - name: "drive"       # Автомобильные/Наземные интерфейсы
+    description: "CAN, CAN-FD, LIN bus emulation"
+  
+  - name: "visual"      # Визуализация окружения
+    description: "High-bandwidth sensor injection (Camera RTP, Lidar, Radar)"
+
+  - name: "io_gate"     # Физический уровень
+    description: "Hardware abstraction for FPGA/PCIe cards (AltaDT, Kvaser, etc.)"

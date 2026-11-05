@@ -30,7 +30,8 @@ fn empty_component_loads() {
 
 #[test]
 fn deterministic_counter_loads() {
-    let descriptor = nxdc::load_component(&component("components/deterministic_counter.yaml")).unwrap();
+    let descriptor =
+        nxdc::load_component(&component("components/deterministic_counter.yaml")).unwrap();
     assert_eq!(descriptor.name, "DeterministicCounter");
     assert_eq!(descriptor.ports.len(), 2);
     assert!(descriptor.ports.iter().any(|p| p.name == "trigger"));

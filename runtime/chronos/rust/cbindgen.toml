@@ -1,0 +1,16 @@
+language = "C"
+cpp_compat = true
+header = """
+#include <stdint.h>
+
+/* Chronos runtime time types — generated from nxd-runtime-chronos. */
+"""
+include_guard = "NXD_RUNTIME_CHRONOS_H"
+style = "type"
+tab_width = 4
+
+[parse]
+parse_deps = false
+
+[export]
+include = ["SimTime", "WallTime", "HwFpgaTime", "Duration"]

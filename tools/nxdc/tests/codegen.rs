@@ -46,26 +46,36 @@ fn check_rust_compiles(name: &str, source: &str) {
 fn sample_header_rust_compiles() {
     let schemas = nxdc::load_concrete_contracts(&contract("valid/sample_header.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
 fn can_frame_rust_compiles() {
     let schemas = nxdc::load_concrete_contracts(&contract("valid/can_frame.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
 fn nested_record_rust_compiles() {
     let schemas = nxdc::load_concrete_contracts(&contract("valid/nested_record.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
 fn can_batch_classical_fd_xl_instances() {
-    let schemas = nxdc::load_concrete_contracts(&contract("valid/can_batch_template.yaml")).unwrap();
+    let schemas =
+        nxdc::load_concrete_contracts(&contract("valid/can_batch_template.yaml")).unwrap();
     assert_eq!(schemas.len(), 3);
     assert!(schemas.iter().any(|s| s.name == "RawCanBatchClassical"));
     assert!(schemas.iter().any(|s| s.name == "RawCanBatchFd"));
@@ -80,7 +90,8 @@ fn can_batch_classical_fd_xl_instances() {
 
 #[test]
 fn can_batch_rust_instances_compile() {
-    let schemas = nxdc::load_concrete_contracts(&contract("valid/can_batch_template.yaml")).unwrap();
+    let schemas =
+        nxdc::load_concrete_contracts(&contract("valid/can_batch_template.yaml")).unwrap();
     for schema in &schemas {
         check_rust_compiles(&schema.name, &nxdc::gen::rust::emit(schema).unwrap());
     }
@@ -88,8 +99,8 @@ fn can_batch_rust_instances_compile() {
 
 #[test]
 fn duplicate_concrete_rejected() {
-    let err = nxdc::load_concrete_contracts(&contract("invalid/duplicate_concrete.yaml"))
-        .unwrap_err();
+    let err =
+        nxdc::load_concrete_contracts(&contract("invalid/duplicate_concrete.yaml")).unwrap_err();
     let text = err.to_string();
     assert!(
         text.contains("duplicate concrete instance name 'A'"),
@@ -99,8 +110,8 @@ fn duplicate_concrete_rejected() {
 
 #[test]
 fn out_of_range_param_rejected() {
-    let err = nxdc::load_concrete_contracts(&contract("invalid/out_of_range_param.yaml"))
-        .unwrap_err();
+    let err =
+        nxdc::load_concrete_contracts(&contract("invalid/out_of_range_param.yaml")).unwrap_err();
     let text = err.to_string();
     assert!(
         text.contains("value 100 is above maximum 10"),
@@ -166,9 +177,7 @@ fn run_rust_golden(name: &str, lib_source: &str, main_source: &str) -> String {
     fs::write(dir.join("src/main.rs"), main_source).unwrap();
     fs::write(
         dir.join("Cargo.toml"),
-        format!(
-            "[package]\nname = \"{package}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
-        ),
+        format!("[package]\nname = \"{package}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",),
     )
     .unwrap();
 
@@ -182,13 +191,21 @@ fn run_rust_golden(name: &str, lib_source: &str, main_source: &str) -> String {
         .output()
         .expect("cargo should be available");
 
-    assert!(output.status.success(), "Rust golden run failed: {}", String::from_utf8_lossy(&output.stderr));
-    String::from_utf8(output.stdout).expect("golden output is utf-8").trim().to_owned()
+    assert!(
+        output.status.success(),
+        "Rust golden run failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout)
+        .expect("golden output is utf-8")
+        .trim()
+        .to_owned()
 }
 
 #[test]
 fn can_batch_cpp_compiles() {
-    let _schemas = nxdc::load_concrete_contracts(&contract("valid/can_batch_template.yaml")).unwrap();
+    let _schemas =
+        nxdc::load_concrete_contracts(&contract("valid/can_batch_template.yaml")).unwrap();
     let dir = tmp_dir().join("cpp-can-batch");
     fs::create_dir_all(&dir).unwrap();
 
@@ -233,35 +250,53 @@ int main() {
             "-Wextra",
             "-Werror",
             "-I",
-            out_dir.parent().unwrap().parent().unwrap().to_str().unwrap(),
+            out_dir
+                .parent()
+                .unwrap()
+                .parent()
+                .unwrap()
+                .to_str()
+                .unwrap(),
             main_path.to_str().unwrap(),
             "-o",
             dir.join("test").to_str().unwrap(),
         ])
         .status()
         .expect("g++ should be available");
-    assert!(status.success(), "C++ compilation failed for RawCanBatch concrete instances");
+    assert!(
+        status.success(),
+        "C++ compilation failed for RawCanBatch concrete instances"
+    );
 }
 
 #[test]
 fn can_heartbeat_rust_compiles() {
     let schemas = nxdc::load_concrete_contracts(&contract("valid/can_heartbeat.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
 fn video_frame_rust_compiles() {
     let schemas = nxdc::load_concrete_contracts(&contract("valid/video_frame.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
 fn video_heartbeat_rust_compiles() {
     let schemas = nxdc::load_concrete_contracts(&contract("valid/video_heartbeat.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
@@ -269,7 +304,10 @@ fn video_aggregate_errors_rust_compiles() {
     let schemas =
         nxdc::load_concrete_contracts(&contract("valid/video_aggregate_errors.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
@@ -277,7 +315,10 @@ fn can_aggregate_errors_rust_compiles() {
     let schemas =
         nxdc::load_concrete_contracts(&contract("valid/can_aggregate_errors.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
-    check_rust_compiles(&schemas[0].name, &nxdc::gen::rust::emit(&schemas[0]).unwrap());
+    check_rust_compiles(
+        &schemas[0].name,
+        &nxdc::gen::rust::emit(&schemas[0]).unwrap(),
+    );
 }
 
 #[test]
@@ -357,7 +398,9 @@ int main() {
         .expect("g++ should be available");
     assert!(status.success(), "C++ golden compilation failed");
 
-    let output = Command::new(&bin).output().expect("golden binary should run");
+    let output = Command::new(&bin)
+        .output()
+        .expect("golden binary should run");
     assert!(output.status.success(), "C++ golden run failed");
     let out = String::from_utf8(output.stdout).expect("golden output is utf-8");
     assert_eq!(out.trim(), "08070605040302010204000000000000");

@@ -25,8 +25,18 @@ fn sample_header_canonical_layout() {
     // frame_no:0, sim_time_ns:8, hw_time_ns:16, source_id:24, sequence:28, flags:32
     // trailing padding to 8 -> size 40
     assert_eq!(layout.size, 40);
-    assert_eq!(fields.iter().find(|f| f.name == "frame_no").unwrap().offset, 0);
-    assert_eq!(fields.iter().find(|f| f.name == "source_id").unwrap().offset, 24);
+    assert_eq!(
+        fields.iter().find(|f| f.name == "frame_no").unwrap().offset,
+        0
+    );
+    assert_eq!(
+        fields
+            .iter()
+            .find(|f| f.name == "source_id")
+            .unwrap()
+            .offset,
+        24
+    );
 }
 
 #[test]
@@ -81,13 +91,20 @@ fn description_edit_preserves_hash() {
 #[test]
 fn layout_edit_changes_hash() {
     let text = load_fixture_text("valid/sample_header.yaml");
-    let edited = text.replace("type: u64\n    description: Logical frame number.", "type: u32\n    description: Logical frame number.");
+    let edited = text.replace(
+        "type: u64\n    description: Logical frame number.",
+        "type: u32\n    description: Logical frame number.",
+    );
 
     let dir = std::env::temp_dir().join("nxdc-layout-test");
     fs::create_dir_all(&dir).unwrap();
     let original_path = dir.join("orig.yaml");
     let edited_path = dir.join("edited.yaml");
-    fs::write(&original_path, load_fixture_text("valid/sample_header.yaml")).unwrap();
+    fs::write(
+        &original_path,
+        load_fixture_text("valid/sample_header.yaml"),
+    )
+    .unwrap();
     fs::write(&edited_path, edited).unwrap();
 
     let schema_orig = nxdc::load_contract(&original_path).unwrap();
@@ -162,10 +179,7 @@ fn can_batch_storage_sizes() {
         let (json, _) = nxdc::canonical::emit(schema).unwrap();
         let value: serde_json::Value = serde_json::from_str(&json).unwrap();
         let types = value["types"].as_array().unwrap();
-        let payload_field = types
-            .iter()
-            .find(|t| t["name"] == "CanFrame")
-            .unwrap()["fields"]
+        let payload_field = types.iter().find(|t| t["name"] == "CanFrame").unwrap()["fields"]
             .as_array()
             .unwrap()
             .iter()

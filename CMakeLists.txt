@@ -89,6 +89,16 @@ add_custom_target(nxd_generated_headers
     DEPENDS ${NXD_SINGLE_HEADERS} ${NXD_BATCH_HEADERS} ${NXD_SIGNALVALUE_HEADERS})
 
 # -----------------------------------------------------------------------------
+# Chronos runtime
+# -----------------------------------------------------------------------------
+add_subdirectory(runtime/chronos)
+
+# -----------------------------------------------------------------------------
+# Composer runtime
+# -----------------------------------------------------------------------------
+add_subdirectory(runtime/composer)
+
+# -----------------------------------------------------------------------------
 # Static library that validates every generated contract header.
 # -----------------------------------------------------------------------------
 # Each generated header is compiled in its own translation unit.  This lets the

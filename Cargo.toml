@@ -4,6 +4,7 @@ members = [
     "tools/nxdc",
     "sdk/rust/nxd-abi",
     "sdk/rust/nxd-sdk",
+    "runtime/chronos/rust",
     "examples/components/rust/counter",
     "tests/components/rust/alloc_counter",
     "tests/components/rust/panic_step",

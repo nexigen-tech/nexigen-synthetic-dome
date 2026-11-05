@@ -26,14 +26,13 @@ const POINTER_PATTERNS: &[&str] = &["*", "&", "->", "Ref<", "dyn "];
 /// Validates a parsed contract schema template and returns the concrete
 /// instantiations that should be emitted.  If the schema declares no template
 /// parameters, a single concrete schema (the template itself) is returned.
-pub fn validate_and_instantiate(schema: &ContractSchema) -> Result<Vec<ContractSchema>, Diagnostics> {
+pub fn validate_and_instantiate(
+    schema: &ContractSchema,
+) -> Result<Vec<ContractSchema>, Diagnostics> {
     let mut diag = Diagnostics::new();
 
-    let param_map: HashMap<String, &TemplateParam> = schema
-        .params
-        .iter()
-        .map(|p| (p.name.clone(), p))
-        .collect();
+    let param_map: HashMap<String, &TemplateParam> =
+        schema.params.iter().map(|p| (p.name.clone(), p)).collect();
 
     let mut type_names = HashSet::new();
     for td in &schema.types {
@@ -297,17 +296,26 @@ fn validate_type_template(
                 return;
             }
             if FORBIDDEN_TYPE_NAMES.contains(&name.as_str()) {
-                diag.push(path, format!("unbounded type '{name}' is not allowed on the wire"));
-            } else if name.contains('*') || name.contains('&') || POINTER_PATTERNS.iter().any(|p| name.contains(p)) {
-                diag.push(path, format!("pointer or reference type '{name}' is not allowed on the wire"));
+                diag.push(
+                    path,
+                    format!("unbounded type '{name}' is not allowed on the wire"),
+                );
+            } else if name.contains('*')
+                || name.contains('&')
+                || POINTER_PATTERNS.iter().any(|p| name.contains(p))
+            {
+                diag.push(
+                    path,
+                    format!("pointer or reference type '{name}' is not allowed on the wire"),
+                );
             } else if looks_like_generic(name) {
                 diag.push(
                     path,
                     format!("unbounded generic type '{name}' is not allowed on the wire"),
                 );
-            } else if looks_like_primitive(name) && parse_primitive(name).is_none() {
-                diag.push(path, format!("malformed type '{name}'"));
-            } else if !is_valid_identifier(name) {
+            } else if (looks_like_primitive(name) && parse_primitive(name).is_none())
+                || !is_valid_identifier(name)
+            {
                 diag.push(path, format!("malformed type '{name}'"));
             } else if !type_names.contains(name) {
                 diag.push(path, format!("unknown type reference '{name}'"));
@@ -326,7 +334,10 @@ fn validate_type_template(
                     );
                 }
             } else {
-                diag.push(path, format!("unknown template parameter '{param}' in array size"));
+                diag.push(
+                    path,
+                    format!("unknown template parameter '{param}' in array size"),
+                );
             }
             validate_type_template(element, type_names, param_map, &format!("{path}[]"), diag);
         }
@@ -344,17 +355,26 @@ fn validate_component_parameter_type(ty: &Type, path: &str, diag: &mut Diagnosti
         Type::Primitive(_) => {}
         Type::Named(name) => {
             if FORBIDDEN_TYPE_NAMES.contains(&name.as_str()) {
-                diag.push(path, format!("unbounded type '{name}' is not allowed for a parameter"));
-            } else if name.contains('*') || name.contains('&') || POINTER_PATTERNS.iter().any(|p| name.contains(p)) {
-                diag.push(path, format!("pointer or reference type '{name}' is not allowed for a parameter"));
+                diag.push(
+                    path,
+                    format!("unbounded type '{name}' is not allowed for a parameter"),
+                );
+            } else if name.contains('*')
+                || name.contains('&')
+                || POINTER_PATTERNS.iter().any(|p| name.contains(p))
+            {
+                diag.push(
+                    path,
+                    format!("pointer or reference type '{name}' is not allowed for a parameter"),
+                );
             } else if looks_like_generic(name) {
                 diag.push(
                     path,
                     format!("unbounded generic type '{name}' is not allowed for a parameter"),
                 );
-            } else if looks_like_primitive(name) && parse_primitive(name).is_none() {
-                diag.push(path, format!("malformed type '{name}'"));
-            } else if !is_valid_identifier(name) {
+            } else if (looks_like_primitive(name) && parse_primitive(name).is_none())
+                || !is_valid_identifier(name)
+            {
                 diag.push(path, format!("malformed type '{name}'"));
             }
             // Named user types are not resolved here because component parameters
@@ -380,17 +400,26 @@ fn validate_type(ty: &Type, type_names: &HashSet<String>, path: &str, diag: &mut
         Type::Primitive(_) => {}
         Type::Named(name) => {
             if FORBIDDEN_TYPE_NAMES.contains(&name.as_str()) {
-                diag.push(path, format!("unbounded type '{name}' is not allowed on the wire"));
-            } else if name.contains('*') || name.contains('&') || POINTER_PATTERNS.iter().any(|p| name.contains(p)) {
-                diag.push(path, format!("pointer or reference type '{name}' is not allowed on the wire"));
+                diag.push(
+                    path,
+                    format!("unbounded type '{name}' is not allowed on the wire"),
+                );
+            } else if name.contains('*')
+                || name.contains('&')
+                || POINTER_PATTERNS.iter().any(|p| name.contains(p))
+            {
+                diag.push(
+                    path,
+                    format!("pointer or reference type '{name}' is not allowed on the wire"),
+                );
             } else if looks_like_generic(name) {
                 diag.push(
                     path,
                     format!("unbounded generic type '{name}' is not allowed on the wire"),
                 );
-            } else if looks_like_primitive(name) && parse_primitive(name).is_none() {
-                diag.push(path, format!("malformed type '{name}'"));
-            } else if !is_valid_identifier(name) {
+            } else if (looks_like_primitive(name) && parse_primitive(name).is_none())
+                || !is_valid_identifier(name)
+            {
                 diag.push(path, format!("malformed type '{name}'"));
             } else if !type_names.contains(name) {
                 diag.push(path, format!("unknown type reference '{name}'"));
@@ -423,7 +452,10 @@ fn validate_concrete_instance(
     for (name, value) in &instance.values.integers {
         let param_path = format!("{path}.params.{name}");
         if !provided_integers.insert(name.clone()) {
-            diag.push(&param_path, format!("duplicate parameter value for '{name}'"));
+            diag.push(
+                &param_path,
+                format!("duplicate parameter value for '{name}'"),
+            );
             continue;
         }
         let Some(param) = param_map.get(name) else {
@@ -431,23 +463,20 @@ fn validate_concrete_instance(
             continue;
         };
         let TemplateParamKind::Integer { min, max, .. } = param.kind else {
-            diag.push(&param_path, format!("parameter '{name}' is not an integer parameter"));
+            diag.push(
+                &param_path,
+                format!("parameter '{name}' is not an integer parameter"),
+            );
             continue;
         };
         if let Some(min) = min {
             if *value < min {
-                diag.push(
-                    &param_path,
-                    format!("value {value} is below minimum {min}"),
-                );
+                diag.push(&param_path, format!("value {value} is below minimum {min}"));
             }
         }
         if let Some(max) = max {
             if *value > max {
-                diag.push(
-                    &param_path,
-                    format!("value {value} is above maximum {max}"),
-                );
+                diag.push(&param_path, format!("value {value} is above maximum {max}"));
             }
         }
     }
@@ -455,7 +484,10 @@ fn validate_concrete_instance(
     for (name, value) in &instance.values.types {
         let param_path = format!("{path}.params.{name}");
         if !provided_types.insert(name.clone()) {
-            diag.push(&param_path, format!("duplicate parameter value for '{name}'"));
+            diag.push(
+                &param_path,
+                format!("duplicate parameter value for '{name}'"),
+            );
             continue;
         }
         let Some(param) = param_map.get(name) else {
@@ -463,7 +495,10 @@ fn validate_concrete_instance(
             continue;
         };
         let TemplateParamKind::TypeParam { allowed, .. } = &param.kind else {
-            diag.push(&param_path, format!("parameter '{name}' is not a type parameter"));
+            diag.push(
+                &param_path,
+                format!("parameter '{name}' is not a type parameter"),
+            );
             continue;
         };
         if !allowed.contains(value) {
@@ -482,7 +517,11 @@ fn validate_concrete_instance(
     for param in param_map.values() {
         let has_value = match &param.kind {
             TemplateParamKind::Integer { default, .. } => {
-                let provided = instance.values.integers.iter().any(|(n, _)| n == &param.name);
+                let provided = instance
+                    .values
+                    .integers
+                    .iter()
+                    .any(|(n, _)| n == &param.name);
                 provided || default.is_some()
             }
             TemplateParamKind::TypeParam { default, .. } => {

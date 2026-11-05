@@ -72,7 +72,8 @@ pub fn sha256(text: &str) -> [u8; 32] {
 }
 
 fn json_to_string(value: &Value) -> Result<String, CanonicalError> {
-    serde_json::to_string(value).map_err(|e| CanonicalError::new(format!("JSON serialization: {e}")))
+    serde_json::to_string(value)
+        .map_err(|e| CanonicalError::new(format!("JSON serialization: {e}")))
 }
 
 fn schema_to_value(schema: &ContractSchema) -> Result<Value, CanonicalError> {
@@ -99,7 +100,10 @@ fn schema_to_value(schema: &ContractSchema) -> Result<Value, CanonicalError> {
     let mut obj = Map::new();
     obj.insert("alignment".to_owned(), Value::Number(root_align.into()));
     obj.insert("fields".to_owned(), Value::Array(root_fields));
-    obj.insert("format".to_owned(), Value::String(CANONICAL_FORMAT.to_owned()));
+    obj.insert(
+        "format".to_owned(),
+        Value::String(CANONICAL_FORMAT.to_owned()),
+    );
     obj.insert("name".to_owned(), Value::String(schema.name.clone()));
     obj.insert("size".to_owned(), Value::Number(root_size.into()));
     obj.insert("types".to_owned(), Value::Array(types));
@@ -131,7 +135,10 @@ fn record_value(
     }
 
     let mut obj = Map::new();
-    obj.insert("alignment".to_owned(), Value::Number(layout.alignment.into()));
+    obj.insert(
+        "alignment".to_owned(),
+        Value::Number(layout.alignment.into()),
+    );
     obj.insert("fields".to_owned(), Value::Array(fields));
     obj.insert("kind".to_owned(), Value::String("record".to_owned()));
     obj.insert("name".to_owned(), Value::String(rec.name.clone()));
@@ -147,11 +154,17 @@ fn enum_value(en: &EnumDef) -> Result<Value, CanonicalError> {
     }
 
     let mut obj = Map::new();
-    obj.insert("alignment".to_owned(), Value::Number(layout.alignment.into()));
+    obj.insert(
+        "alignment".to_owned(),
+        Value::Number(layout.alignment.into()),
+    );
     obj.insert("kind".to_owned(), Value::String("enum".to_owned()));
     obj.insert("name".to_owned(), Value::String(en.name.clone()));
     obj.insert("size".to_owned(), Value::Number(layout.size.into()));
-    obj.insert("underlying".to_owned(), Value::String(primitive_name(en.underlying).to_owned()));
+    obj.insert(
+        "underlying".to_owned(),
+        Value::String(primitive_name(en.underlying).to_owned()),
+    );
     obj.insert("values".to_owned(), Value::Array(values));
     Ok(Value::Object(obj))
 }
@@ -169,7 +182,10 @@ fn field_layout_value(
     layout: Layout,
 ) -> Result<Value, CanonicalError> {
     let mut obj = Map::new();
-    obj.insert("alignment".to_owned(), Value::Number(layout.alignment.into()));
+    obj.insert(
+        "alignment".to_owned(),
+        Value::Number(layout.alignment.into()),
+    );
     if let Some(max) = field.max {
         obj.insert("max".to_owned(), Value::Number(max.into()));
     }
@@ -229,8 +245,14 @@ fn build_registry(schema: &ContractSchema) -> HashMap<String, TypeDef> {
 
 pub(crate) fn primitive_layout(p: PrimitiveType) -> Layout {
     match p {
-        PrimitiveType::I8 | PrimitiveType::U8 => Layout { size: 1, alignment: 1 },
-        PrimitiveType::I16 | PrimitiveType::U16 => Layout { size: 2, alignment: 2 },
+        PrimitiveType::I8 | PrimitiveType::U8 => Layout {
+            size: 1,
+            alignment: 1,
+        },
+        PrimitiveType::I16 | PrimitiveType::U16 => Layout {
+            size: 2,
+            alignment: 2,
+        },
         PrimitiveType::I32 | PrimitiveType::U32 | PrimitiveType::F32 => Layout {
             size: 4,
             alignment: 4,
@@ -290,7 +312,10 @@ fn type_layout(
             };
             Ok(Layout {
                 size: el.size.checked_mul(count).ok_or_else(|| {
-                    CanonicalError::new(format!("array size overflow for type '{}'", type_string(ty)))
+                    CanonicalError::new(format!(
+                        "array size overflow for type '{}'",
+                        type_string(ty)
+                    ))
                 })?,
                 alignment: el.alignment,
             })
@@ -343,7 +368,9 @@ pub fn root_layout(schema: &ContractSchema) -> Result<(Layout, Vec<FieldLayout>)
 pub const COMPONENT_FORMAT: &str = "nxd-component-v1";
 
 /// Emits the canonical UTF-8 JSON document and SHA-256 descriptor hash for a component.
-pub fn emit_component(descriptor: &ComponentDescriptor) -> Result<(String, [u8; 32]), CanonicalError> {
+pub fn emit_component(
+    descriptor: &ComponentDescriptor,
+) -> Result<(String, [u8; 32]), CanonicalError> {
     let value = component_to_value(descriptor)?;
     let json = json_to_string(&value)?;
     let hash = sha256(&json);
@@ -352,12 +379,12 @@ pub fn emit_component(descriptor: &ComponentDescriptor) -> Result<(String, [u8; 
 
 fn component_to_value(descriptor: &ComponentDescriptor) -> Result<Value, CanonicalError> {
     let mut obj = Map::new();
-    obj.insert("format".to_owned(), Value::String(COMPONENT_FORMAT.to_owned()));
-    obj.insert("name".to_owned(), Value::String(descriptor.name.clone()));
     obj.insert(
-        "version".to_owned(),
-        version_value(descriptor.version),
+        "format".to_owned(),
+        Value::String(COMPONENT_FORMAT.to_owned()),
     );
+    obj.insert("name".to_owned(), Value::String(descriptor.name.clone()));
+    obj.insert("version".to_owned(), version_value(descriptor.version));
 
     let mut sdk = Map::new();
     sdk.insert(
@@ -370,17 +397,17 @@ fn component_to_value(descriptor: &ComponentDescriptor) -> Result<Value, Canonic
     );
     obj.insert("sdk".to_owned(), Value::Object(sdk));
 
-    let contracts: Vec<Value> = descriptor.contracts.iter().map(contract_ref_value).collect();
+    let contracts: Vec<Value> = descriptor
+        .contracts
+        .iter()
+        .map(contract_ref_value)
+        .collect();
     obj.insert("contracts".to_owned(), Value::Array(contracts));
 
     let ports: Vec<Value> = descriptor.ports.iter().map(port_value).collect();
     obj.insert("ports".to_owned(), Value::Array(ports));
 
-    let parameters: Vec<Value> = descriptor
-        .parameters
-        .iter()
-        .map(parameter_value)
-        .collect();
+    let parameters: Vec<Value> = descriptor.parameters.iter().map(parameter_value).collect();
     obj.insert("parameters".to_owned(), Value::Array(parameters));
 
     let thread_roles: Vec<Value> = descriptor
@@ -434,10 +461,7 @@ fn port_value(port: &Port) -> Value {
         "contract_version".to_owned(),
         version_value(port.contract_version),
     );
-    obj.insert(
-        "required".to_owned(),
-        Value::Bool(port.binding_required),
-    );
+    obj.insert("required".to_owned(), Value::Bool(port.binding_required));
     Value::Object(obj)
 }
 
@@ -544,7 +568,10 @@ mod tests {
     fn canonical_json_is_sorted() {
         let schema = sample_schema();
         let (json, _) = emit(&schema).unwrap();
-        assert!(json.starts_with("{\"alignment\":"), "keys must be lexicographically sorted: {json}");
+        assert!(
+            json.starts_with("{\"alignment\":"),
+            "keys must be lexicographically sorted: {json}"
+        );
     }
 
     #[test]

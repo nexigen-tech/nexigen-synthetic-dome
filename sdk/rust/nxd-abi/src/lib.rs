@@ -110,9 +110,11 @@ pub type NxdCreateFn = unsafe extern "C" fn() -> *mut NxdComponentState;
 pub type NxdDestroyFn = unsafe extern "C" fn(state: *mut NxdComponentState);
 
 /// Initializes the component from a UTF-8 configuration blob.
-pub type NxdInitializeFn =
-    unsafe extern "C" fn(state: *mut NxdComponentState, config: *const c_char, config_len: usize)
-        -> NxdStatus;
+pub type NxdInitializeFn = unsafe extern "C" fn(
+    state: *mut NxdComponentState,
+    config: *const c_char,
+    config_len: usize,
+) -> NxdStatus;
 
 /// Arms the component before the first frame.
 pub type NxdArmFn =

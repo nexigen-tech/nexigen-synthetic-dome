@@ -45,7 +45,10 @@ fn build_registry(schema: &ContractSchema) -> HashMap<String, TypeDef> {
     map
 }
 
-fn type_descriptor(td: &TypeDef, registry: &HashMap<String, TypeDef>) -> Result<Value, Diagnostics> {
+fn type_descriptor(
+    td: &TypeDef,
+    registry: &HashMap<String, TypeDef>,
+) -> Result<Value, Diagnostics> {
     match td {
         TypeDef::Record(rec) => {
             let mut obj = Map::new();
@@ -91,7 +94,10 @@ fn enum_value_descriptor(ev: &EnumValue) -> Value {
     Value::Object(obj)
 }
 
-fn field_descriptor(fl: &FieldLayout, registry: &HashMap<String, TypeDef>) -> Result<Value, Diagnostics> {
+fn field_descriptor(
+    fl: &FieldLayout,
+    registry: &HashMap<String, TypeDef>,
+) -> Result<Value, Diagnostics> {
     let mut obj = Map::new();
     obj.insert("name".to_owned(), Value::String(fl.name.clone()));
     obj.insert("type".to_owned(), type_string_value(&fl.ty));
@@ -145,7 +151,9 @@ fn type_string(ty: &Type) -> String {
         Type::Primitive(p) => primitive_name(*p).to_owned(),
         Type::Named(n) => n.clone(),
         Type::Array(element, ArrayCount::Literal(n)) => format!("{}[{n}]", type_string(element)),
-        Type::Array(element, ArrayCount::Param(name)) => format!("{}[{name}]", type_string(element)),
+        Type::Array(element, ArrayCount::Param(name)) => {
+            format!("{}[{name}]", type_string(element))
+        }
     }
 }
 

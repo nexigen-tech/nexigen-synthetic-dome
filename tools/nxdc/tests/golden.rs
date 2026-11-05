@@ -31,9 +31,7 @@ fn run_rust(name: &str, lib_source: &str, main_source: &str) -> String {
     fs::write(dir.join("src/main.rs"), main_source).unwrap();
     fs::write(
         dir.join("Cargo.toml"),
-        format!(
-            "[package]\nname = \"{package}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
-        ),
+        format!("[package]\nname = \"{package}\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",),
     )
     .unwrap();
 
@@ -81,19 +79,24 @@ fn run_cpp(header: &str, header_source: &str, main_source: &str) -> String {
         ])
         .status()
         .expect("g++ should be available");
-    assert!(status.success(), "C++ golden compilation failed for {header}");
+    assert!(
+        status.success(),
+        "C++ golden compilation failed for {header}"
+    );
 
     let output = Command::new(&bin)
         .output()
         .expect("golden binary should run");
-    assert!(output.status.success(), "C++ golden run failed for {header}");
+    assert!(
+        output.status.success(),
+        "C++ golden run failed for {header}"
+    );
     String::from_utf8(output.stdout).expect("golden output is utf-8")
 }
 
 #[test]
 fn sample_header_cross_language_golden() {
-    let schemas =
-        nxdc::load_concrete_contracts(&fixture("valid/sample_header.yaml")).unwrap();
+    let schemas = nxdc::load_concrete_contracts(&fixture("valid/sample_header.yaml")).unwrap();
     assert_eq!(schemas.len(), 1);
     let schema = &schemas[0];
     let cpp_header = nxdc::gen::cpp::emit(schema).unwrap();
@@ -137,14 +140,17 @@ int main() {
 
     let rust_out = run_rust("SampleHeader", &rust_source, rust_main);
     let cpp_out = run_cpp("SampleHeader", &cpp_header, cpp_main);
-    assert_eq!(rust_out.trim(), cpp_out.trim(), "SampleHeader bytes mismatch");
+    assert_eq!(
+        rust_out.trim(),
+        cpp_out.trim(),
+        "SampleHeader bytes mismatch"
+    );
     assert!(!rust_out.trim().is_empty());
 }
 
 #[test]
 fn signal_value_cross_language_golden() {
-    let schemas =
-        nxdc::load_concrete_contracts(&fixture("valid/signal_value.yaml")).unwrap();
+    let schemas = nxdc::load_concrete_contracts(&fixture("valid/signal_value.yaml")).unwrap();
     let schema = schemas.iter().find(|s| s.name == "SignalValueU64").unwrap();
     let cpp_header = nxdc::gen::cpp::emit(schema).unwrap();
     let rust_source = nxdc::gen::rust::emit(schema).unwrap();
@@ -181,13 +187,16 @@ int main() {
 
     let rust_out = run_rust("SignalValueU64", &rust_source, rust_main);
     let cpp_out = run_cpp("SignalValueU64", &cpp_header, cpp_main);
-    assert_eq!(rust_out.trim(), cpp_out.trim(), "SignalValueU64 bytes mismatch");
+    assert_eq!(
+        rust_out.trim(),
+        cpp_out.trim(),
+        "SignalValueU64 bytes mismatch"
+    );
 }
 
 #[test]
 fn raw_can_frame_cross_language_golden() {
-    let schemas =
-        nxdc::load_concrete_contracts(&fixture("valid/can_frame.yaml")).unwrap();
+    let schemas = nxdc::load_concrete_contracts(&fixture("valid/can_frame.yaml")).unwrap();
     let schema = &schemas[0];
     let cpp_header = nxdc::gen::cpp::emit(schema).unwrap();
     let rust_source = nxdc::gen::rust::emit(schema).unwrap();
@@ -236,13 +245,16 @@ int main() {
 
     let rust_out = run_rust("RawCanFrame", &rust_source, rust_main);
     let cpp_out = run_cpp("RawCanFrame", &cpp_header, cpp_main);
-    assert_eq!(rust_out.trim(), cpp_out.trim(), "RawCanFrame bytes mismatch");
+    assert_eq!(
+        rust_out.trim(),
+        cpp_out.trim(),
+        "RawCanFrame bytes mismatch"
+    );
 }
 
 #[test]
 fn video_heartbeat_cross_language_golden() {
-    let schemas =
-        nxdc::load_concrete_contracts(&fixture("valid/video_heartbeat.yaml")).unwrap();
+    let schemas = nxdc::load_concrete_contracts(&fixture("valid/video_heartbeat.yaml")).unwrap();
     let schema = &schemas[0];
     let cpp_header = nxdc::gen::cpp::emit(schema).unwrap();
     let rust_source = nxdc::gen::rust::emit(schema).unwrap();
@@ -283,7 +295,11 @@ int main() {
 
     let rust_out = run_rust("VideoHeartbeat", &rust_source, rust_main);
     let cpp_out = run_cpp("VideoHeartbeat", &cpp_header, cpp_main);
-    assert_eq!(rust_out.trim(), cpp_out.trim(), "VideoHeartbeat bytes mismatch");
+    assert_eq!(
+        rust_out.trim(),
+        cpp_out.trim(),
+        "VideoHeartbeat bytes mismatch"
+    );
 }
 
 #[test]
@@ -303,7 +319,13 @@ fn representative_contract_metadata_matches_both_directions() {
             schemas.iter().find(|s| s.name == concrete_name).unwrap()
         };
         let (_, hash) = nxdc::canonical::emit(schema).unwrap();
-        assert!(!hash.iter().all(|b| *b == 0), "{concrete_name} layout_hash must be non-zero");
-        assert!(schema.version.major > 0, "{concrete_name} major version must be non-zero");
+        assert!(
+            !hash.iter().all(|b| *b == 0),
+            "{concrete_name} layout_hash must be non-zero"
+        );
+        assert!(
+            schema.version.major > 0,
+            "{concrete_name} major version must be non-zero"
+        );
     }
 }

@@ -38,16 +38,36 @@ pub fn emit(schema: &ContractSchema) -> Result<String, Diagnostics> {
 }
 
 fn emit_zero_copy_trait(out: &mut String) {
-    writeln!(out, "/// Marker trait for values that can cross the component").unwrap();
-    writeln!(out, "/// boundary as raw bytes without copies, serialization, or").unwrap();
+    writeln!(
+        out,
+        "/// Marker trait for values that can cross the component"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "/// boundary as raw bytes without copies, serialization, or"
+    )
+    .unwrap();
     writeln!(out, "/// lifetime checks.").unwrap();
     writeln!(out, "///").unwrap();
     writeln!(out, "/// # Safety").unwrap();
     writeln!(out, "/// Implementing this trait asserts that the type is:").unwrap();
     writeln!(out, "/// - `Copy + Send + Sync + 'static`;").unwrap();
-    writeln!(out, "/// - made only of primitives and arrays of primitives;").unwrap();
-    writeln!(out, "/// - free of pointers, references, atomics, Rust enums, strings,").unwrap();
-    writeln!(out, "///   or any value whose validity depends on runtime invariants.").unwrap();
+    writeln!(
+        out,
+        "/// - made only of primitives and arrays of primitives;"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "/// - free of pointers, references, atomics, Rust enums, strings,"
+    )
+    .unwrap();
+    writeln!(
+        out,
+        "///   or any value whose validity depends on runtime invariants."
+    )
+    .unwrap();
     writeln!(
         out,
         "pub unsafe trait ZeroCopySend: Copy + Send + Sync + 'static {{}}"
@@ -119,8 +139,8 @@ fn emit_record(
         emit_dependencies(out, &field.ty, schema, registry, emitted)?;
     }
 
-    let (layout, field_layouts) = canonical::record_layout(&rec.fields, registry, &mut HashMap::new())
-        .map_err(|e| {
+    let (layout, field_layouts) =
+        canonical::record_layout(&rec.fields, registry, &mut HashMap::new()).map_err(|e| {
             let mut d = Diagnostics::new();
             d.push(format!("types.{}", rec.name), e.to_string());
             d
@@ -197,12 +217,7 @@ fn emit_aggregate(
 
     emit_layout_asserts(out, &schema.name, layout, &field_layouts)?;
 
-    writeln!(
-        out,
-        "unsafe impl ZeroCopySend for {} {{}}",
-        schema.name
-    )
-    .unwrap();
+    writeln!(out, "unsafe impl ZeroCopySend for {} {{}}", schema.name).unwrap();
     writeln!(out).unwrap();
 
     // Transport type identity constants.
@@ -278,11 +293,12 @@ fn emit_layout_asserts(
     Ok(())
 }
 
-fn emit_zero_copy_asserts(
-    out: &mut String,
-    schema: &ContractSchema,
-) -> Result<(), Diagnostics> {
-    writeln!(out, "// Compile-time check: every generated type is ZeroCopySend.").unwrap();
+fn emit_zero_copy_asserts(out: &mut String, schema: &ContractSchema) -> Result<(), Diagnostics> {
+    writeln!(
+        out,
+        "// Compile-time check: every generated type is ZeroCopySend."
+    )
+    .unwrap();
     writeln!(out, "const _: () = {{").unwrap();
     writeln!(out, "    fn assert_zero_copy<T: ZeroCopySend>() {{}}").unwrap();
     for td in &schema.types {
@@ -294,6 +310,7 @@ fn emit_zero_copy_asserts(
     Ok(())
 }
 
+#[allow(clippy::only_used_in_recursion)]
 fn rust_type(ty: &Type, registry: &HashMap<String, TypeDef>) -> String {
     match ty {
         Type::Primitive(p) => rust_primitive(*p).to_owned(),

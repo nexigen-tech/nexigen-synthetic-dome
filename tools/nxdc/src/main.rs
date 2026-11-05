@@ -23,7 +23,9 @@ fn main() -> ExitCode {
         "validate-contract" => validate_contract(path),
         "validate-component" => validate_component(path),
         "canonicalize" => canonicalize(path, args.get(3).map(PathBuf::from)),
-        "emit-component-descriptor" => emit_component_descriptor(path, args.get(3).map(PathBuf::from)),
+        "emit-component-descriptor" => {
+            emit_component_descriptor(path, args.get(3).map(PathBuf::from))
+        }
         "emit-cpp" => emit_cpp(path, args.get(3).map(PathBuf::from)),
         "emit-rust" => emit_rust(path, args.get(3).map(PathBuf::from)),
         "emit-descriptors" => emit_descriptors(path, args.get(3).map(PathBuf::from)),
@@ -173,11 +175,11 @@ fn emit_component_descriptor(path: &Path, output: Option<PathBuf>) -> ExitCode {
 }
 
 fn emit_cpp(path: &Path, output: Option<PathBuf>) -> ExitCode {
-    emit_each(path, output, "hpp", |schema| nxdc::gen::cpp::emit(schema), "cpp")
+    emit_each(path, output, "hpp", nxdc::gen::cpp::emit, "cpp")
 }
 
 fn emit_rust(path: &Path, output: Option<PathBuf>) -> ExitCode {
-    emit_each(path, output, "rs", |schema| nxdc::gen::rust::emit(schema), "rust")
+    emit_each(path, output, "rs", nxdc::gen::rust::emit, "rust")
 }
 
 fn emit_descriptors(path: &Path, output: Option<PathBuf>) -> ExitCode {
@@ -185,7 +187,7 @@ fn emit_descriptors(path: &Path, output: Option<PathBuf>) -> ExitCode {
         path,
         output,
         "descriptor.json",
-        |schema| nxdc::gen::descriptor::emit(schema),
+        nxdc::gen::descriptor::emit,
         "descriptor",
     )
 }

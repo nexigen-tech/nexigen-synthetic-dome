@@ -1,0 +1,15 @@
+[package]
+name = "nxd-runtime-chronos"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NXD Chronos runtime — Rust bindings and simulation-time types."
+
+[dependencies]
+nxd-abi = { path = "../../../sdk/rust/nxd-abi" }
+
+[dev-dependencies]
+libloading = "0.9.0"

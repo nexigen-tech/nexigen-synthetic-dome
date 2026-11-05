@@ -24,10 +24,7 @@ use std::path::Path;
 pub fn load_contract(path: &Path) -> Result<ContractSchema, Diagnostics> {
     let text = fs::read_to_string(path).map_err(|e| {
         let mut d = Diagnostics::new();
-        d.push(
-            path.to_string_lossy(),
-            format!("failed to read file: {e}"),
-        );
+        d.push(path.to_string_lossy(), format!("failed to read file: {e}"));
         d
     })?;
     let schema = parse::load_contract(path, &text)?;
@@ -43,10 +40,7 @@ pub fn load_contract(path: &Path) -> Result<ContractSchema, Diagnostics> {
 pub fn load_concrete_contracts(path: &Path) -> Result<Vec<ContractSchema>, Diagnostics> {
     let text = fs::read_to_string(path).map_err(|e| {
         let mut d = Diagnostics::new();
-        d.push(
-            path.to_string_lossy(),
-            format!("failed to read file: {e}"),
-        );
+        d.push(path.to_string_lossy(), format!("failed to read file: {e}"));
         d
     })?;
     let schema = parse::load_contract(path, &text)?;
@@ -57,10 +51,7 @@ pub fn load_concrete_contracts(path: &Path) -> Result<Vec<ContractSchema>, Diagn
 pub fn load_component(path: &Path) -> Result<ComponentDescriptor, Diagnostics> {
     let text = fs::read_to_string(path).map_err(|e| {
         let mut d = Diagnostics::new();
-        d.push(
-            path.to_string_lossy(),
-            format!("failed to read file: {e}"),
-        );
+        d.push(path.to_string_lossy(), format!("failed to read file: {e}"));
         d
     })?;
     let descriptor = parse::load_component(path, &text)?;

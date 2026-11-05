@@ -192,6 +192,7 @@ pub fn write_component_name(buf: &mut [c_char], name: &str) {
 /// # Safety
 ///
 /// All function pointers must satisfy the ABI-1 contract.
+#[allow(clippy::too_many_arguments)]
 pub const unsafe fn build_abi_table(
     name: [c_char; 64],
     version: NxdAbiVersion,

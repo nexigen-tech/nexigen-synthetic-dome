@@ -32,7 +32,10 @@ fn nested_record_loads() {
 
     let history = schema.fields.iter().find(|f| f.name == "history").unwrap();
     assert_eq!(history.ty.array_count(), Some(8));
-    assert_eq!(history.ty.array_element().unwrap(), &nxdc::model::Type::Primitive(nxdc::model::PrimitiveType::F32));
+    assert_eq!(
+        history.ty.array_element().unwrap(),
+        &nxdc::model::Type::Primitive(nxdc::model::PrimitiveType::F32)
+    );
 }
 
 #[test]
@@ -48,8 +51,15 @@ fn can_frame_loads() {
 fn field_metadata_loads() {
     let schema = nxdc::load_contract(&fixture("valid/field_metadata.yaml")).unwrap();
     assert_eq!(schema.name, "FieldMetadata");
-    let temp = schema.fields.iter().find(|f| f.name == "temperature").unwrap();
-    assert_eq!(temp.ty, nxdc::model::Type::Primitive(nxdc::model::PrimitiveType::F32));
+    let temp = schema
+        .fields
+        .iter()
+        .find(|f| f.name == "temperature")
+        .unwrap();
+    assert_eq!(
+        temp.ty,
+        nxdc::model::Type::Primitive(nxdc::model::PrimitiveType::F32)
+    );
     assert_eq!(temp.unit.as_deref(), Some("degC"));
     assert_eq!(temp.min, Some(-40));
     assert_eq!(temp.max, Some(150));
@@ -73,7 +83,10 @@ fn unbounded_string_rejected() {
         text.contains("unbounded type 'string'"),
         "expected unbounded diagnostic, got: {text}"
     );
-    assert!(text.contains("fields[0].type"), "expected path in diagnostic: {text}");
+    assert!(
+        text.contains("fields[0].type"),
+        "expected path in diagnostic: {text}"
+    );
 }
 
 #[test]
@@ -170,7 +183,8 @@ fn signal_value_loads() {
 
 #[test]
 fn can_payload_too_large_rejected() {
-    let err = nxdc::load_concrete_contracts(&fixture("invalid/can_payload_too_large.yaml")).unwrap_err();
+    let err =
+        nxdc::load_concrete_contracts(&fixture("invalid/can_payload_too_large.yaml")).unwrap_err();
     let text = err.to_string();
     assert!(
         text.contains("value 4096 is above maximum 2048"),
@@ -180,7 +194,8 @@ fn can_payload_too_large_rejected() {
 
 #[test]
 fn can_capacity_too_large_rejected() {
-    let err = nxdc::load_concrete_contracts(&fixture("invalid/can_capacity_too_large.yaml")).unwrap_err();
+    let err =
+        nxdc::load_concrete_contracts(&fixture("invalid/can_capacity_too_large.yaml")).unwrap_err();
     let text = err.to_string();
     assert!(
         text.contains("value 512 is above maximum 256"),

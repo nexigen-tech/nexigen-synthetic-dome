@@ -96,8 +96,7 @@ fn parse_contract_header(
     diag: &mut Diagnostics,
 ) -> (Option<String>, Option<Version>, Option<String>) {
     let name = get_string(node, "contract.name", diag);
-    let version = lookup(node, "version")
-        .and_then(|v| parse_version(v, "contract.version", diag));
+    let version = lookup(node, "version").and_then(|v| parse_version(v, "contract.version", diag));
     let description = lookup(node, "description").and_then(|v| {
         if let Some(s) = v.as_str() {
             Some(s.to_owned())
@@ -150,7 +149,9 @@ fn parse_template_params(node: &Yaml, diag: &mut Diagnostics) -> Vec<TemplatePar
 
         match kind {
             "integer" => {
-                let Some(type_str) = hash_get_string(item_hash, "type", &format!("{path}.type"), diag) else {
+                let Some(type_str) =
+                    hash_get_string(item_hash, "type", &format!("{path}.type"), diag)
+                else {
                     continue;
                 };
                 let Some(ty) = parse_primitive(&type_str) else {
@@ -176,7 +177,12 @@ fn parse_template_params(node: &Yaml, diag: &mut Diagnostics) -> Vec<TemplatePar
                 let default = lookup_in_hash(item_hash, "default").and_then(|v| v.as_i64());
                 params.push(TemplateParam {
                     name,
-                    kind: TemplateParamKind::Integer { ty, min, max, default },
+                    kind: TemplateParamKind::Integer {
+                        ty,
+                        min,
+                        max,
+                        default,
+                    },
                 });
             }
             "type" => {
@@ -214,7 +220,7 @@ fn parse_template_params(node: &Yaml, diag: &mut Diagnostics) -> Vec<TemplatePar
                 };
                 let default = lookup_in_hash(item_hash, "default")
                     .and_then(|v| v.as_str())
-                    .and_then(|s| parse_primitive(s));
+                    .and_then(parse_primitive);
                 params.push(TemplateParam {
                     name,
                     kind: TemplateParamKind::TypeParam { allowed, default },
@@ -382,7 +388,10 @@ fn parse_types(node: &Yaml, diag: &mut Diagnostics) -> Vec<TypeDef> {
                 }));
             }
             _ => {
-                diag.push(format!("{path}.kind"), format!("unknown type kind '{kind}'"));
+                diag.push(
+                    format!("{path}.kind"),
+                    format!("unknown type kind '{kind}'"),
+                );
             }
         }
     }
@@ -409,7 +418,8 @@ fn parse_enum_values(node: Option<&Yaml>, path: &str, diag: &mut Diagnostics) ->
             diag.push(&item_path, "expected enum value mapping");
             continue;
         };
-        let Some(name) = hash_get_string(item_hash, "name", &format!("{item_path}.name"), diag) else {
+        let Some(name) = hash_get_string(item_hash, "name", &format!("{item_path}.name"), diag)
+        else {
             continue;
         };
         if !is_valid_identifier(&name) {
@@ -457,7 +467,8 @@ fn parse_fields(node: &Yaml, path: &str, diag: &mut Diagnostics) -> Vec<Field> {
             continue;
         };
 
-        let Some(name) = hash_get_string(item_hash, "name", &format!("{item_path}.name"), diag) else {
+        let Some(name) = hash_get_string(item_hash, "name", &format!("{item_path}.name"), diag)
+        else {
             continue;
         };
         if !is_valid_identifier(&name) {
@@ -475,7 +486,8 @@ fn parse_fields(node: &Yaml, path: &str, diag: &mut Diagnostics) -> Vec<Field> {
             continue;
         }
 
-        let Some(type_str) = hash_get_string(item_hash, "type", &format!("{item_path}.type"), diag) else {
+        let Some(type_str) = hash_get_string(item_hash, "type", &format!("{item_path}.type"), diag)
+        else {
             continue;
         };
         let ty = match parse_type_str(&type_str) {
@@ -624,7 +636,11 @@ fn parse_component_document(_path: &Path, root: &Yaml) -> Result<ComponentDescri
 
     let supported_modes = lookup(root, "supported_modes")
         .and_then(|n| n.as_vec())
-        .map(|v| v.iter().filter_map(|x| x.as_str().map(|s| s.to_owned())).collect())
+        .map(|v| {
+            v.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_owned()))
+                .collect()
+        })
         .unwrap_or_default();
 
     if diag.is_empty() {
@@ -649,8 +665,7 @@ fn parse_component_header(
     diag: &mut Diagnostics,
 ) -> (Option<String>, Option<Version>, Option<String>) {
     let name = get_string(node, "component.name", diag);
-    let version = lookup(node, "version")
-        .and_then(|v| parse_version(v, "component.version", diag));
+    let version = lookup(node, "version").and_then(|v| parse_version(v, "component.version", diag));
     let description = lookup(node, "description").and_then(|v| {
         if let Some(s) = v.as_str() {
             Some(s.to_owned())
@@ -747,7 +762,8 @@ fn parse_parameters(node: &Yaml, diag: &mut Diagnostics) -> Vec<Parameter> {
             );
             continue;
         }
-        let Some(type_str) = hash_get_string(item_hash, "type", &format!("{path}.type"), diag) else {
+        let Some(type_str) = hash_get_string(item_hash, "type", &format!("{path}.type"), diag)
+        else {
             continue;
         };
         let ty = match parse_type_str(&type_str) {
@@ -811,37 +827,47 @@ fn parse_ports(node: &Yaml, diag: &mut Diagnostics) -> Vec<Port> {
         let Some(name) = hash_get_string(item_hash, "name", &format!("{path}.name"), diag) else {
             continue;
         };
-        let direction = match hash_get_string(item_hash, "direction", &format!("{path}.direction"), diag)
-            .as_deref()
-        {
-            Some("in") => PortDirection::In,
-            Some("out") => PortDirection::Out,
-            Some("inout") => PortDirection::InOut,
-            Some(d) => {
-                diag.push(format!("{path}.direction"), format!("unknown direction '{d}'"));
-                continue;
-            }
-            None => continue,
-        };
-        let Some(contract_name) = hash_get_string(item_hash, "contract", &format!("{path}.contract"), diag) else {
+        let direction =
+            match hash_get_string(item_hash, "direction", &format!("{path}.direction"), diag)
+                .as_deref()
+            {
+                Some("in") => PortDirection::In,
+                Some("out") => PortDirection::Out,
+                Some("inout") => PortDirection::InOut,
+                Some(d) => {
+                    diag.push(
+                        format!("{path}.direction"),
+                        format!("unknown direction '{d}'"),
+                    );
+                    continue;
+                }
+                None => continue,
+            };
+        let Some(contract_name) =
+            hash_get_string(item_hash, "contract", &format!("{path}.contract"), diag)
+        else {
             continue;
         };
         let contract_version = lookup_in_hash(item_hash, "contract_version")
             .and_then(|v| parse_version(v, &format!("{path}.contract_version"), diag))
             .unwrap_or(Version::new(0, 0, 0));
-        let semantics = match hash_get_string(item_hash, "semantics", &format!("{path}.semantics"), diag)
-            .as_deref()
-        {
-            Some("signal") => PortSemantics::Signal,
-            Some("event") => PortSemantics::Event,
-            Some("stream") => PortSemantics::Stream,
-            Some("command") => PortSemantics::Command,
-            Some(s) => {
-                diag.push(format!("{path}.semantics"), format!("unknown semantics '{s}'"));
-                continue;
-            }
-            None => continue,
-        };
+        let semantics =
+            match hash_get_string(item_hash, "semantics", &format!("{path}.semantics"), diag)
+                .as_deref()
+            {
+                Some("signal") => PortSemantics::Signal,
+                Some("event") => PortSemantics::Event,
+                Some("stream") => PortSemantics::Stream,
+                Some("command") => PortSemantics::Command,
+                Some(s) => {
+                    diag.push(
+                        format!("{path}.semantics"),
+                        format!("unknown semantics '{s}'"),
+                    );
+                    continue;
+                }
+                None => continue,
+            };
         let binding_required = lookup_in_hash(item_hash, "required")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
@@ -970,7 +996,8 @@ fn require_hash<'a>(node: &'a Yaml, key: &str, diag: &mut Diagnostics) -> Option
 }
 
 fn lookup<'a>(node: &'a Yaml, key: &str) -> Option<&'a Yaml> {
-    node.as_hash().and_then(|h| h.get(&Yaml::String(key.to_owned())))
+    node.as_hash()
+        .and_then(|h| h.get(&Yaml::String(key.to_owned())))
 }
 
 fn lookup_in_hash<'a>(hash: &'a yaml_rust2::yaml::Hash, key: &str) -> Option<&'a Yaml> {

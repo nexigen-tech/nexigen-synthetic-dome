@@ -22,8 +22,7 @@ pub fn emit(schema: &ContractSchema) -> Result<String, Diagnostics> {
     writeln!(out, "#include <cstdint>").unwrap();
     writeln!(out, "#include <type_traits>").unwrap();
     writeln!(out).unwrap();
-    writeln!(out, "namespace nxd::contracts {{")
-        .unwrap();
+    writeln!(out, "namespace nxd::contracts {{").unwrap();
 
     let registry = build_registry(schema);
     let mut emitted = HashMap::new();
@@ -97,8 +96,8 @@ fn emit_record(
         emit_dependencies(out, &field.ty, schema, registry, emitted)?;
     }
 
-    let (layout, field_layouts) = canonical::record_layout(&rec.fields, registry, &mut HashMap::new())
-        .map_err(|e| {
+    let (layout, field_layouts) =
+        canonical::record_layout(&rec.fields, registry, &mut HashMap::new()).map_err(|e| {
             let mut d = Diagnostics::new();
             d.push(format!("types.{}", rec.name), e.to_string());
             d
@@ -110,11 +109,7 @@ fn emit_record(
     for fl in &field_layouts {
         if fl.offset > previous_end {
             let pad = fl.offset - previous_end;
-            writeln!(
-                out,
-                "    std::array<std::uint8_t, {pad}> _pad{pad_idx};"
-            )
-            .unwrap();
+            writeln!(out, "    std::array<std::uint8_t, {pad}> _pad{pad_idx};").unwrap();
             pad_idx += 1;
         }
         let cpp_ty = cpp_type(&fl.ty, registry);
@@ -123,11 +118,7 @@ fn emit_record(
     }
     if previous_end < layout.size {
         let pad = layout.size - previous_end;
-        writeln!(
-            out,
-            "    std::array<std::uint8_t, {pad}> _pad{pad_idx};"
-        )
-        .unwrap();
+        writeln!(out, "    std::array<std::uint8_t, {pad}> _pad{pad_idx};").unwrap();
     }
     writeln!(out, "}};").unwrap();
     writeln!(out).unwrap();
@@ -159,11 +150,7 @@ fn emit_aggregate(
     for fl in &field_layouts {
         if fl.offset > previous_end {
             let pad = fl.offset - previous_end;
-            writeln!(
-                out,
-                "    std::array<std::uint8_t, {pad}> _pad{pad_idx};"
-            )
-            .unwrap();
+            writeln!(out, "    std::array<std::uint8_t, {pad}> _pad{pad_idx};").unwrap();
             pad_idx += 1;
         }
         let cpp_ty = cpp_type(&fl.ty, registry);
@@ -172,11 +159,7 @@ fn emit_aggregate(
     }
     if previous_end < layout.size {
         let pad = layout.size - previous_end;
-        writeln!(
-            out,
-            "    std::array<std::uint8_t, {pad}> _pad{pad_idx};"
-        )
-        .unwrap();
+        writeln!(out, "    std::array<std::uint8_t, {pad}> _pad{pad_idx};").unwrap();
     }
     writeln!(out, "}};").unwrap();
     writeln!(out).unwrap();
@@ -260,6 +243,7 @@ fn emit_static_asserts(
     Ok(())
 }
 
+#[allow(clippy::only_used_in_recursion)]
 fn cpp_type(ty: &Type, registry: &HashMap<String, TypeDef>) -> String {
     match ty {
         Type::Primitive(p) => cpp_primitive(*p).to_owned(),

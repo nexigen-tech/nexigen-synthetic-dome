@@ -61,6 +61,7 @@ struct Partition final {
     std::uint32_t id = 0;
     std::string name;
     std::vector<std::string> instance_ids;
+    std::optional<std::string> source_name;
 
     [[nodiscard]] bool operator==(const Partition&) const noexcept = default;
 };

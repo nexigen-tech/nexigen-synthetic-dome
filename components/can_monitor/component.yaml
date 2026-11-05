@@ -1,0 +1,63 @@
+component:
+  name: CanMonitor
+  version: "1.0.0"
+  description: CAN bus monitor that aggregates batch statistics and emits heartbeat after silence.
+
+sdk:
+  abi_major: 1
+  abi_minor: 1
+
+contracts:
+  - name: RawCanBatchClassical
+    version: "1.0.0"
+  - name: CanHeartbeat
+    version: "1.0.0"
+  - name: CanAggregateErrors
+    version: "1.0.0"
+
+ports:
+  - name: in
+    direction: in
+    contract: RawCanBatchClassical
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+  - name: heartbeat
+    direction: out
+    contract: CanHeartbeat
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+  - name: aggregate
+    direction: out
+    contract: CanAggregateErrors
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+
+parameters:
+  - name: source_name
+    type: u8[8]
+    default: "CAN_A"
+    description: ASCII source name this monitor subscribes to; padded or truncated to 8 bytes.
+    required: false
+  - name: silence_interval_ns
+    type: u64
+    default: 2000000
+    description: Silence interval in nanoseconds before a heartbeat frame is emitted.
+    required: false
+
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+
+supported_modes:
+  - headless

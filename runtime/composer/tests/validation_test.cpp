@@ -19,6 +19,7 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1", "mixer_1"},
+            .source_name = std::nullopt,
         });
         plan.wires.push_back(composer::Wire{
             .source_instance = "pid_1",
@@ -39,11 +40,13 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1"},
+            .source_name = std::nullopt,
         });
         plan.partitions.push_back(composer::Partition{
             .id = 2,
             .name = "plant",
             .instance_ids = {"plant_1"},
+            .source_name = std::nullopt,
         });
         plan.wires.push_back(composer::Wire{
             .source_instance = "pid_1",
@@ -66,11 +69,13 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1"},
+            .source_name = std::nullopt,
         });
         plan.partitions.push_back(composer::Partition{
             .id = 2,
             .name = "plant",
             .instance_ids = {"plant_1"},
+            .source_name = std::nullopt,
         });
         plan.wires.push_back(composer::Wire{
             .source_instance = "pid_1",
@@ -91,6 +96,7 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1"},
+            .source_name = std::nullopt,
         });
         plan.wires.push_back(composer::Wire{
             .source_instance = "pid_1",
@@ -113,11 +119,13 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1"},
+            .source_name = std::nullopt,
         });
         plan.partitions.push_back(composer::Partition{
             .id = 2,
             .name = "plant",
             .instance_ids = {"plant_1"},
+            .source_name = std::nullopt,
         });
         plan.let_boundaries.push_back(composer::LetBoundary{
             .id = "control_to_plant",
@@ -147,11 +155,13 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1"},
+            .source_name = std::nullopt,
         });
         plan.partitions.push_back(composer::Partition{
             .id = 2,
             .name = "plant",
             .instance_ids = {"plant_1"},
+            .source_name = std::nullopt,
         });
         plan.wires.push_back(composer::Wire{
             .source_instance = "pid_1",
@@ -172,11 +182,13 @@ int main() {
             .id = 1,
             .name = "control",
             .instance_ids = {"pid_1"},
+            .source_name = std::nullopt,
         });
         plan.partitions.push_back(composer::Partition{
             .id = 2,
             .name = "plant",
             .instance_ids = {"plant_1"},
+            .source_name = std::nullopt,
         });
         plan.let_boundaries.push_back(composer::LetBoundary{
             .id = "control_to_plant",

@@ -65,6 +65,25 @@ target_compile_options(nxd_composer_validation_test PRIVATE
 
 add_test(NAME nxd_composer_validation COMMAND nxd_composer_validation_test)
 
+add_executable(nxd_composer_source_name_test tests/source_name_validation_test.cpp)
+
+target_link_libraries(nxd_composer_source_name_test PRIVATE nxd_composer)
+
+target_include_directories(nxd_composer_source_name_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+target_compile_options(nxd_composer_source_name_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+
+add_test(NAME nxd_composer_source_name
+    COMMAND nxd_composer_source_name_test
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/virtual_can_can_a.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/virtual_can_isolation.json")
+
 add_executable(nxd_composer_manifest_test tests/manifest_test.cpp)
 
 target_link_libraries(nxd_composer_manifest_test PRIVATE nxd_composer)

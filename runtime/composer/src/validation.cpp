@@ -21,6 +21,18 @@ find_partition_id(const DomePlan& plan, const std::string& instance_id) noexcept
     return std::nullopt;
 }
 
+[[nodiscard]] const std::optional<std::string>*
+find_source_name(const DomePlan& plan, const std::string& instance_id) noexcept {
+    for (const auto& partition : plan.partitions) {
+        for (const auto& member : partition.instance_ids) {
+            if (member == instance_id) {
+                return &partition.source_name;
+            }
+        }
+    }
+    return nullptr;
+}
+
 } // namespace
 
 std::vector<ValidationDiagnostic>
@@ -159,6 +171,45 @@ validate_let_boundaries(const DomePlan& plan) noexcept {
                 .role = {},
             });
         }
+    }
+
+    return diagnostics;
+}
+
+std::vector<ValidationDiagnostic>
+validate_source_name_wiring(const DomePlan& plan) noexcept {
+    std::vector<ValidationDiagnostic> diagnostics;
+
+    for (const auto& wire : plan.wires) {
+        const auto* source_source_name = find_source_name(plan, wire.source_instance);
+        const auto* target_source_name = find_source_name(plan, wire.target_instance);
+        if (source_source_name == nullptr || target_source_name == nullptr) {
+            continue;
+        }
+        if (!source_source_name->has_value() || !target_source_name->has_value()) {
+            continue;
+        }
+        if (**source_source_name == **target_source_name) {
+            continue;
+        }
+
+        diagnostics.push_back(ValidationDiagnostic{
+            .message = std::format(
+                "wire from {}.{} to {}.{} crosses source names '{}' and '{}'",
+                wire.source_instance, wire.source_port,
+                wire.target_instance, wire.target_port,
+                **source_source_name, **target_source_name),
+            .source_partition_id = find_partition_id(plan, wire.source_instance),
+            .target_partition_id = find_partition_id(plan, wire.target_instance),
+            .source_instance = wire.source_instance,
+            .source_port = wire.source_port,
+            .target_instance = wire.target_instance,
+            .target_port = wire.target_port,
+            .component_instance = {},
+            .component_name = {},
+            .contract_name = {},
+            .role = {},
+        });
     }
 
     return diagnostics;

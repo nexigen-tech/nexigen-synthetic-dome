@@ -1,0 +1,34 @@
+{
+  "version_major": 1,
+  "version_minor": 0,
+  "chronos": {
+    "mode": 3,
+    "base_frame_interval_ns": 1000000,
+    "scale_factor": 1
+  },
+  "partitions": [
+    {
+      "id": 1,
+      "name": "can_a",
+      "source_name": "CAN_A",
+      "instance_ids": ["virtual_can_a", "monitor_a"]
+    }
+  ],
+  "let_boundaries": [],
+  "wires": [
+    {
+      "source_instance": "virtual_can_a",
+      "source_port": "out",
+      "target_instance": "monitor_a",
+      "target_port": "in",
+      "let_boundary_id": null
+    }
+  ],
+  "processes": [
+    {
+      "id": "can_a_proc",
+      "executable": "./virtual_can_can_a",
+      "instance_ids": ["virtual_can_a", "monitor_a"]
+    }
+  ]
+}

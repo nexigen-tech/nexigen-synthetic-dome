@@ -43,6 +43,13 @@ validate_intra_partition_direct_wiring(const DomePlan& plan) noexcept;
 [[nodiscard]] std::vector<ValidationDiagnostic>
 validate_let_boundaries(const DomePlan& plan) noexcept;
 
+/// Validates that wires never connect instances belonging to different
+/// logical source names.  A partition without an explicit source name is
+/// treated as compatible with any source, preserving legacy plans.
+/// Returns one diagnostic per cross-source wire.
+[[nodiscard]] std::vector<ValidationDiagnostic>
+validate_source_name_wiring(const DomePlan& plan) noexcept;
+
 } // namespace nxd::runtime::composer
 
 #endif // NXD_RUNTIME_COMPOSER_VALIDATION_HPP

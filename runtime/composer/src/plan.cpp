@@ -90,6 +90,7 @@ namespace {
     j["id"] = p.id;
     j["name"] = p.name;
     j["instance_ids"] = p.instance_ids;
+    j["source_name"] = to_json_optional_string(p.source_name);
     return j;
 }
 
@@ -110,6 +111,12 @@ namespace {
     p.name = name->get<std::string>();
     if (!parse_string_array(*instance_ids, p.instance_ids)) {
         return std::nullopt;
+    }
+    const auto source_name = item.find("source_name");
+    if (source_name != item.end()) {
+        if (!from_json_optional_string(*source_name, p.source_name)) {
+            return std::nullopt;
+        }
     }
     return p;
 }

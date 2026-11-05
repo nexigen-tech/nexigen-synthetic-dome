@@ -25,11 +25,13 @@ int main() {
         .id = 1,
         .name = "control",
         .instance_ids = {"pid_1", "mixer_1"},
+        .source_name = std::nullopt,
     });
     plan.partitions.push_back(composer::Partition{
         .id = 2,
         .name = "plant",
         .instance_ids = {"plant_1"},
+        .source_name = std::nullopt,
     });
 
     plan.let_boundaries.push_back(composer::LetBoundary{
@@ -81,6 +83,7 @@ int main() {
         .id = 1,
         .name = "only",
         .instance_ids = {"a", "b"},
+        .source_name = std::nullopt,
     });
     direct_plan.wires.push_back(composer::Wire{
         .source_instance = "a",

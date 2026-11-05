@@ -164,6 +164,35 @@ target_compile_options(nxd_example_counter_cpp PRIVATE
     -Wall
     -Wextra
     -Werror)
+
+add_library(nxd_example_virtual_can_cpp SHARED examples/components/cpp/virtual_can/virtual_can.cpp)
+add_dependencies(nxd_example_virtual_can_cpp nxd_abi_header nxd_generated_headers)
+target_include_directories(nxd_example_virtual_can_cpp PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_example_virtual_can_cpp PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+
+add_library(nxd_example_can_monitor_cpp SHARED
+    examples/components/cpp/can_monitor/can_monitor.cpp
+    examples/components/cpp/can_monitor/can_monitor_outputs.cpp)
+add_dependencies(nxd_example_can_monitor_cpp nxd_abi_header nxd_generated_headers)
+target_include_directories(nxd_example_can_monitor_cpp PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/cpp/can_monitor"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_example_can_monitor_cpp PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
 set(NXD_ABI_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi/nxd_abi.h")
 set(NXD_ABI_HPP "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include/nxd/abi.hpp")
 
@@ -256,8 +285,14 @@ target_compile_options(nxd_host PUBLIC
 set(NXD_COMPONENT_DESCRIPTORS_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/descriptors")
 file(MAKE_DIRECTORY "${NXD_COMPONENT_DESCRIPTORS_DIR}")
 
-foreach(component IN ITEMS empty deterministic_counter)
-    set(yaml "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}.yaml")
+foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor)
+    set(yaml_file "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}.yaml")
+    set(yaml_dir "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}/component.yaml")
+    if(EXISTS "${yaml_dir}")
+        set(yaml "${yaml_dir}")
+    else()
+        set(yaml "${yaml_file}")
+    endif()
     set(json "${NXD_COMPONENT_DESCRIPTORS_DIR}/${component}.descriptor.json")
     set(hash "${NXD_COMPONENT_DESCRIPTORS_DIR}/${component}.descriptor.hash")
     add_custom_command(
@@ -575,6 +610,48 @@ add_test(NAME nxd_host_port_io_golden
             "${NXD_RUST_PORT_IO_SO}")
 set_tests_properties(nxd_host_port_io_golden PROPERTIES
     DEPENDS "nxd_test_port_io_cpp;nxd_test_port_io_rust")
+
+add_executable(nxd_host_virtual_can_test tests/host_virtual_can_test.cpp)
+target_link_libraries(nxd_host_virtual_can_test PRIVATE nxd_host)
+target_include_directories(nxd_host_virtual_can_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_virtual_can_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_virtual_can_test nxd_example_virtual_can_cpp nxd_component_descriptors)
+add_test(NAME nxd_host_virtual_can
+    COMMAND nxd_host_virtual_can_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/virtual_can.descriptor.json"
+            "$<TARGET_FILE:nxd_example_virtual_can_cpp>")
+set_tests_properties(nxd_host_virtual_can PROPERTIES
+    DEPENDS "nxd_example_virtual_can_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_can_monitor_test tests/host_can_monitor_test.cpp)
+target_link_libraries(nxd_host_can_monitor_test PRIVATE nxd_host)
+target_include_directories(nxd_host_can_monitor_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_can_monitor_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_can_monitor_test nxd_example_can_monitor_cpp nxd_component_descriptors)
+add_test(NAME nxd_host_can_monitor
+    COMMAND nxd_host_can_monitor_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/can_monitor.descriptor.json"
+            "$<TARGET_FILE:nxd_example_can_monitor_cpp>")
+set_tests_properties(nxd_host_can_monitor PROPERTIES
+    DEPENDS "nxd_example_can_monitor_cpp;nxd_component_descriptors")
 
 # Child-process runner used by panic/failure-injection tests
 add_executable(nxd_host_child_runner tests/host_child_runner.cpp)

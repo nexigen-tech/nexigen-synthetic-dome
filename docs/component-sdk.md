@@ -12,6 +12,8 @@ descriptor hash, and required resources, then drives the lifecycle.
 | ABI types | `sdk/cpp/include/nxd/abi.hpp` (wraps `nxd_abi.h`) | `sdk/rust/nxd-abi` | Fixed-layout `#[repr(C)]` structs, status codes, frame context |
 | Safe wrappers | `sdk/cpp/include/nxd/sdk.hpp` | `sdk/rust/nxd-sdk` | Zero-allocation lifecycle helpers, state pointer casting, RNG wrapper |
 | Examples | `examples/components/cpp/counter` | `examples/components/rust/counter` | Deterministic counter matching byte-for-byte |
+| Examples | `examples/components/cpp/virtual_can` | — | Deterministic virtual CAN source emitting `RawCanBatchClassical` |
+| Examples | `examples/components/cpp/can_monitor` | — | CAN monitor producing `CanHeartbeat` and `CanAggregateErrors` |
 | Test plugins | `tests/components/cpp/*` | `tests/components/rust/*` | Lifecycle, allocation, and panic injection |
 
 ## ABI-1 table
@@ -238,6 +240,34 @@ Tests in `tests/` cover:
 * Cross-language port I/O golden equivalence (`nxd_host_port_io_golden`)
 * Child-process panic and failure injection (`nxd_host_panic_failure`)
 * Empty-component ABI overhead benchmark (`nxd_host_empty_benchmark`)
+* Virtual CAN source scheduling, SelfRx loopback, and watermark batches
+  (`nxd_host_virtual_can`)
+* CAN monitor aggregate counters and silence heartbeat (`nxd_host_can_monitor`)
+
+## Virtual CAN source and monitor
+
+`examples/components/cpp/virtual_can` produces a deterministic
+`RawCanBatchClassical` every simulation millisecond.  The component owns a
+bounded send queue created during `initialize`, sorts emitted frames by CAN
+identifier, and echoes every transmitted frame as `SelfRx` in the same batch.
+Empty batches act as deterministic frame-completion watermarks.  The hot path
+uses only pre-allocated `std::array` storage and performs no heap allocation
+after `arm`.
+
+`examples/components/cpp/can_monitor` consumes one batch per frame and emits
+`CanAggregateErrors` every frame plus a `CanHeartbeat` after a configurable
+silence interval.  Like the source, it keeps all state in POD fields and writes
+output ports in-place.
+
+## Source-name isolation
+
+Composer `Partition` declarations may carry an optional `source_name` string
+that groups instances on the same logical bus.  The Composer validation rule
+`validate_source_name_wiring` rejects any wire whose source and target instances
+belong to partitions with different, non-empty source names.  This lets plans
+keep independent CAN sources (`CAN_A`, `CAN_B`, ...) isolated without runtime
+filtering.  Plan fixtures in `runtime/composer/tests/fixtures/` demonstrate the
+rule.
 
 ## Further reading
 

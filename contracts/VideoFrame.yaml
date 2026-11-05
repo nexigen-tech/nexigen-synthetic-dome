@@ -63,8 +63,8 @@ fields:
     type: u32
     description: Length of valid payload bytes.
   - name: payload
-    type: u8[2048]
-    description: Bounded frame payload.
+    type: u8[8388608]
+    description: Bounded frame payload; sized for RGBA8888 1920x1080 in the skeleton.
   - name: flags
     type: u32
     description: Frame flags.

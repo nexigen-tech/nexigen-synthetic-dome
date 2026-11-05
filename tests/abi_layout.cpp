@@ -1,4 +1,5 @@
 #include "nxd/abi.hpp"
+#include "nxd/contracts/VideoFrame.hpp"
 #include <cstdint>
 #include <cstddef>
 #include <type_traits>
@@ -43,5 +44,11 @@ static_assert(sizeof(NxdAbiEntryFn) == sizeof(void*), "NxdAbiEntryFn size");
 // type.  A real plugin implements exactly this signature.
 extern "C" const NxdAbiTable* nxd_abi_entry();
 static_assert(std::is_same_v<decltype(&nxd_abi_entry), NxdAbiEntryFn>, "entry signature mismatch");
+
+// VideoFrame is sized for FullHD RGBA in the skeleton.
+static_assert(sizeof(nxd::contracts::VideoFrame) == 8'388'676, "VideoFrame size");
+static_assert(alignof(nxd::contracts::VideoFrame) == 4, "VideoFrame alignment");
+static_assert(offsetof(nxd::contracts::VideoFrame, payload) == 64, "VideoFrame payload offset");
+static_assert(offsetof(nxd::contracts::VideoFrame, flags) == 8'388'672, "VideoFrame flags offset");
 
 int main() { return 0; }

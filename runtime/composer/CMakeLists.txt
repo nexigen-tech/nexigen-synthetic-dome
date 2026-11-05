@@ -84,6 +84,25 @@ add_test(NAME nxd_composer_source_name
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/virtual_can_can_a.json"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/virtual_can_isolation.json")
 
+add_executable(nxd_composer_video_source_test tests/video_source_validation_test.cpp)
+
+target_link_libraries(nxd_composer_video_source_test PRIVATE nxd_composer)
+
+target_include_directories(nxd_composer_video_source_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+target_compile_options(nxd_composer_video_source_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+
+add_test(NAME nxd_composer_video_source
+    COMMAND nxd_composer_video_source_test
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/video_camera_front_left.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/video_isolation.json")
+
 add_executable(nxd_composer_manifest_test tests/manifest_test.cpp)
 
 target_link_libraries(nxd_composer_manifest_test PRIVATE nxd_composer)

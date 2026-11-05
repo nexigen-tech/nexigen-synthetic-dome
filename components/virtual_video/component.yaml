@@ -1,0 +1,68 @@
+component:
+  name: VirtualVideo
+  version: "1.0.0"
+  description: Deterministic virtual video source that emits RGBA8888 FullHD frames at 50 FPS.
+
+sdk:
+  abi_major: 1
+  abi_minor: 1
+
+contracts:
+  - name: VideoFrame
+    version: "1.0.0"
+  - name: VideoHeartbeat
+    version: "1.0.0"
+  - name: VideoAggregateErrors
+    version: "1.0.0"
+
+ports:
+  - name: out
+    direction: out
+    contract: VideoFrame
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+  - name: heartbeat
+    direction: out
+    contract: VideoHeartbeat
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+  - name: aggregate
+    direction: out
+    contract: VideoAggregateErrors
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+
+parameters:
+  - name: source_name
+    type: u8[8]
+    default: "Camera_Front_Left"
+    description: ASCII source name used to tag outgoing frames; padded or truncated to 8 bytes.
+    required: false
+  - name: silence_interval_ns
+    type: u64
+    default: 40000000
+    description: Silence interval in nanoseconds before a heartbeat frame is emitted.
+    required: false
+  - name: gap_every_n_frames
+    type: u32
+    default: 0
+    description: If non-zero, skip every Nth data frame to inject a gap for testing.
+    required: false
+
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+
+supported_modes:
+  - headless

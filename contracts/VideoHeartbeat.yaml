@@ -4,7 +4,7 @@ contract:
   description: Video stream heartbeat with no payload and independent transport/content sequences.
 
 types:
-  - name: Status
+  - name: VideoHeartbeatStatus
     kind: enum
     underlying: u8
     values:
@@ -29,5 +29,5 @@ fields:
     type: i64
     description: Hardware timestamp in nanoseconds.
   - name: status
-    type: Status
+    type: VideoHeartbeatStatus
     description: Stream status.

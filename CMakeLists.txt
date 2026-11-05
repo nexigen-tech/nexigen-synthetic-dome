@@ -117,6 +117,7 @@ add_subdirectory(runtime/transport)
 # Walking-skeleton runner
 # -----------------------------------------------------------------------------
 add_subdirectory(tools/nexigen-run)
+add_subdirectory(tools/video-viewer)
 
 # -----------------------------------------------------------------------------
 # Static library that validates every generated contract header.
@@ -193,6 +194,32 @@ target_compile_options(nxd_example_can_monitor_cpp PRIVATE
     -Wall
     -Wextra
     -Werror)
+
+add_library(nxd_example_virtual_video_cpp SHARED examples/components/cpp/virtual_video/virtual_video.cpp)
+add_dependencies(nxd_example_virtual_video_cpp nxd_abi_header nxd_generated_headers)
+target_include_directories(nxd_example_virtual_video_cpp PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_example_virtual_video_cpp PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+
+add_library(nxd_example_video_opengl_cpp SHARED examples/components/cpp/video_opengl/video_opengl.cpp)
+add_dependencies(nxd_example_video_opengl_cpp nxd_abi_header nxd_generated_headers)
+target_include_directories(nxd_example_video_opengl_cpp PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_example_video_opengl_cpp PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
 set(NXD_ABI_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi/nxd_abi.h")
 set(NXD_ABI_HPP "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include/nxd/abi.hpp")
 
@@ -204,10 +231,11 @@ add_custom_target(nxd_abi_header
     VERBATIM)
 
 add_executable(nxd_abi_layout_test tests/abi_layout.cpp)
-add_dependencies(nxd_abi_layout_test nxd_abi_header)
+add_dependencies(nxd_abi_layout_test nxd_abi_header nxd_generated_headers)
 target_include_directories(nxd_abi_layout_test PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi")
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
 target_compile_options(nxd_abi_layout_test PRIVATE
     -fno-exceptions
     -fno-rtti
@@ -285,7 +313,7 @@ target_compile_options(nxd_host PUBLIC
 set(NXD_COMPONENT_DESCRIPTORS_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/descriptors")
 file(MAKE_DIRECTORY "${NXD_COMPONENT_DESCRIPTORS_DIR}")
 
-foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor)
+foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor virtual_video video_opengl)
     set(yaml_file "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}.yaml")
     set(yaml_dir "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}/component.yaml")
     if(EXISTS "${yaml_dir}")
@@ -652,6 +680,69 @@ add_test(NAME nxd_host_can_monitor
             "$<TARGET_FILE:nxd_example_can_monitor_cpp>")
 set_tests_properties(nxd_host_can_monitor PROPERTIES
     DEPENDS "nxd_example_can_monitor_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_virtual_video_test tests/host_virtual_video_test.cpp)
+target_link_libraries(nxd_host_virtual_video_test PRIVATE nxd_host)
+target_include_directories(nxd_host_virtual_video_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_virtual_video_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_virtual_video_test nxd_example_virtual_video_cpp nxd_component_descriptors)
+add_test(NAME nxd_host_virtual_video
+    COMMAND nxd_host_virtual_video_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/virtual_video.descriptor.json"
+            "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
+set_tests_properties(nxd_host_virtual_video PROPERTIES
+    DEPENDS "nxd_example_virtual_video_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_video_opengl_test tests/host_video_opengl_test.cpp)
+target_link_libraries(nxd_host_video_opengl_test PRIVATE nxd_host)
+target_include_directories(nxd_host_video_opengl_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_video_opengl_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_video_opengl_test nxd_example_video_opengl_cpp nxd_component_descriptors)
+add_test(NAME nxd_host_video_opengl
+    COMMAND nxd_host_video_opengl_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/video_opengl.descriptor.json"
+            "$<TARGET_FILE:nxd_example_video_opengl_cpp>")
+set_tests_properties(nxd_host_video_opengl PROPERTIES
+    DEPENDS "nxd_example_video_opengl_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_video_end_to_end_test tests/host_video_end_to_end_test.cpp)
+target_link_libraries(nxd_host_video_end_to_end_test PRIVATE nxd_host)
+target_include_directories(nxd_host_video_end_to_end_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_video_end_to_end_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_video_end_to_end_test nxd_example_virtual_video_cpp nxd_component_descriptors)
+add_test(NAME nxd_host_video_end_to_end
+    COMMAND nxd_host_video_end_to_end_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/virtual_video.descriptor.json"
+            "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
+set_tests_properties(nxd_host_video_end_to_end PROPERTIES
+    DEPENDS "nxd_example_virtual_video_cpp;nxd_component_descriptors")
 
 # Child-process runner used by panic/failure-injection tests
 add_executable(nxd_host_child_runner tests/host_child_runner.cpp)

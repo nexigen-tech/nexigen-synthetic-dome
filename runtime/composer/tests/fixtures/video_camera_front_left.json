@@ -1,0 +1,34 @@
+{
+  "version_major": 1,
+  "version_minor": 0,
+  "chronos": {
+    "mode": 3,
+    "base_frame_interval_ns": 1000000,
+    "scale_factor": 1
+  },
+  "partitions": [
+    {
+      "id": 1,
+      "name": "camera_front_left",
+      "source_name": "Camera_Front_Left",
+      "instance_ids": ["virtual_video_a", "receiver_a"]
+    }
+  ],
+  "let_boundaries": [],
+  "wires": [
+    {
+      "source_instance": "virtual_video_a",
+      "source_port": "out",
+      "target_instance": "receiver_a",
+      "target_port": "in",
+      "let_boundary_id": null
+    }
+  ],
+  "processes": [
+    {
+      "id": "camera_front_left_proc",
+      "executable": "./video_camera_front_left",
+      "instance_ids": ["virtual_video_a", "receiver_a"]
+    }
+  ]
+}

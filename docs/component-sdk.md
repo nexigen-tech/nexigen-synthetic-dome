@@ -14,6 +14,9 @@ descriptor hash, and required resources, then drives the lifecycle.
 | Examples | `examples/components/cpp/counter` | `examples/components/rust/counter` | Deterministic counter matching byte-for-byte |
 | Examples | `examples/components/cpp/virtual_can` | — | Deterministic virtual CAN source emitting `RawCanBatchClassical` |
 | Examples | `examples/components/cpp/can_monitor` | — | CAN monitor producing `CanHeartbeat` and `CanAggregateErrors` |
+| Examples | `examples/components/cpp/virtual_video` | — | Deterministic FullHD RGBA video source emitting `VideoFrame` |
+| Examples | `examples/components/cpp/video_opengl` | — | Video receiver producing `VideoAggregateErrors` |
+| Tools | `tools/video-viewer` | — | Qt6/OpenGL viewer for the video skeleton |
 | Test plugins | `tests/components/cpp/*` | `tests/components/rust/*` | Lifecycle, allocation, and panic injection |
 
 ## ABI-1 table

@@ -1,0 +1,15 @@
+{
+    "format": "nxd-component-v1",
+    "name": "PortIoTest",
+    "version": {"major": 1, "minor": 0, "patch": 0},
+    "sdk": {"abi_major": 1, "abi_minor": 1},
+    "supported_modes": ["headless"],
+    "resources": {"deterministic": true, "max_heap_bytes": 0, "requires_hardware_rt": false, "uses_rng": false},
+    "contracts": [{"name": "TestSample", "version": {"major": 1, "minor": 0, "patch": 0}}],
+    "ports": [
+        {"name": "in", "direction": "in", "semantics": "signal", "contract": "TestSample", "contract_version": {"major": 1, "minor": 0, "patch": 0}, "contract_hash": "1111111111111111111111111111111111111111111111111111111111111111", "required": true},
+        {"name": "out", "direction": "out", "semantics": "signal", "contract": "TestSample", "contract_version": {"major": 1, "minor": 0, "patch": 0}, "contract_hash": "1111111111111111111111111111111111111111111111111111111111111111", "required": true}
+    ],
+    "parameters": [],
+    "thread_roles": []
+}

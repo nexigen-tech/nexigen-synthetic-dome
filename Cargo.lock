@@ -186,6 +186,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nxd-test-port-io-rust"
+version = "0.1.0-alpha"
+dependencies = [
+ "libc",
+ "nxd-abi",
+ "nxd-sdk",
+]
+
+[[package]]
 name = "nxdc"
 version = "0.1.0-alpha"
 dependencies = [

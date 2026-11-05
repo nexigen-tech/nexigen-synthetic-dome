@@ -31,6 +31,10 @@ namespace nxd::host {
         /// Create and initialize the component.
         [[nodiscard]] nexigen::core::Status initialize(std::string_view config = {}) noexcept;
 
+        /// Configures typed port bindings before arming.  The harness owns the
+        /// buffers and exposes them via `port_buffer()`.
+        void configure_ports(std::vector<PortBinding> bindings) noexcept;
+
         /// Arm the component with the given deterministic seed.
         [[nodiscard]] nexigen::core::Status arm(std::uint64_t seed) noexcept;
 
@@ -46,12 +50,29 @@ namespace nxd::host {
         [[nodiscard]] const std::vector<ThreadRoleReport>& thread_reports() const noexcept;
         [[nodiscard]] std::uint64_t seed() const noexcept;
 
+        /// Returns a mutable span over the buffer for the named port.  The
+        /// component must be configured and not yet destroyed.
+        template <typename T>
+        [[nodiscard]] std::span<T> port_buffer(const std::string& name) noexcept {
+            if (!component_) {
+                return {};
+            }
+            for (auto& binding : component_->port_bindings()) {
+                if (binding.name == name) {
+                    return std::span<T>(reinterpret_cast<T*>(binding.buffer.data()),
+                                        binding.buffer.size() / sizeof(T));
+                }
+            }
+            return {};
+        }
+
       private:
         std::filesystem::path plugin_path_;
         std::filesystem::path descriptor_path_;
         HostCapabilities caps_;
         std::optional<LoadedPlugin> plugin_;
         std::optional<ComponentInstance> component_;
+        std::vector<PortBinding> bindings_;
         DriverResult last_result_{};
         std::vector<ThreadRoleReport> thread_reports_{};
         std::uint64_t seed_ = 0;

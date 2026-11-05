@@ -97,6 +97,7 @@ add_subdirectory(runtime/chronos)
 # Composer runtime
 # -----------------------------------------------------------------------------
 add_subdirectory(runtime/composer)
+add_subdirectory(runtime/transport)
 
 # -----------------------------------------------------------------------------
 # Walking-skeleton runner
@@ -154,6 +155,7 @@ set(NXD_ABI_HPP "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include/nxd/abi.hpp")
 
 add_custom_target(nxd_abi_header
     COMMAND cbindgen --crate nxd-abi --output "${NXD_ABI_HEADER}" --config "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi/cbindgen.toml"
+    COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_abi_header.py" "${NXD_ABI_HEADER}"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Regenerating ABI-1 C header with cbindgen"
     VERBATIM)
@@ -192,9 +194,13 @@ set(NXD_CARGO_PROFILE "--release")
 set(NXD_RUST_COUNTER_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_example_counter_rust.so")
 set(NXD_RUST_ALLOC_COUNTER_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_alloc_counter_rust.so")
 set(NXD_RUST_PANIC_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_panic_rust.so")
+set(NXD_RUST_PORT_IO_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_port_io_rust.so")
 
 add_custom_command(
     OUTPUT "${NXD_RUST_COUNTER_SO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/rust/counter/Cargo.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/rust/counter/src/lib.rs"
     COMMAND cargo build -p nxd-example-counter-rust ${NXD_CARGO_PROFILE}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Building Rust counter example plugin"
@@ -362,13 +368,13 @@ target_compile_options(nxd_test_plugin_bad_missing_fn PRIVATE
     -Wextra
     -Werror)
 
-add_library(nxd_test_plugin_bad_extension SHARED tests/plugins/bad_plugin.cpp)
-target_compile_definitions(nxd_test_plugin_bad_extension PRIVATE BAD_EXTENSION)
-add_dependencies(nxd_test_plugin_bad_extension nxd_abi_header)
-target_include_directories(nxd_test_plugin_bad_extension PRIVATE
+add_library(nxd_test_port_io_cpp SHARED tests/components/cpp/port_io/port_io.cpp)
+add_dependencies(nxd_test_port_io_cpp nxd_abi_header)
+target_include_directories(nxd_test_port_io_cpp PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi")
-target_compile_options(nxd_test_plugin_bad_extension PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io")
+target_compile_options(nxd_test_port_io_cpp PRIVATE
     -fno-exceptions
     -fno-rtti
     -Wall
@@ -380,6 +386,9 @@ target_compile_options(nxd_test_plugin_bad_extension PRIVATE
 # -----------------------------------------------------------------------------
 add_custom_command(
     OUTPUT "${NXD_RUST_ALLOC_COUNTER_SO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/alloc_counter/Cargo.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/alloc_counter/src/lib.rs"
     COMMAND cargo build -p nxd-test-alloc-counter-rust ${NXD_CARGO_PROFILE}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Building Rust allocation-counter test plugin"
@@ -389,12 +398,27 @@ add_custom_target(nxd_test_alloc_counter_rust DEPENDS "${NXD_RUST_ALLOC_COUNTER_
 
 add_custom_command(
     OUTPUT "${NXD_RUST_PANIC_SO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/panic_step/Cargo.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/panic_step/src/lib.rs"
     COMMAND cargo build -p nxd-test-panic-rust ${NXD_CARGO_PROFILE}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     COMMENT "Building Rust panic test plugin"
     VERBATIM)
 
 add_custom_target(nxd_test_panic_rust DEPENDS "${NXD_RUST_PANIC_SO}")
+
+add_custom_command(
+    OUTPUT "${NXD_RUST_PORT_IO_SO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/port_io/Cargo.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/port_io/src/lib.rs"
+    COMMAND cargo build -p nxd-test-port-io-rust ${NXD_CARGO_PROFILE}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "Building Rust port-io test plugin"
+    VERBATIM)
+
+add_custom_target(nxd_test_port_io_rust DEPENDS "${NXD_RUST_PORT_IO_SO}")
 
 # -----------------------------------------------------------------------------
 # Host-side correctness tests
@@ -434,10 +458,9 @@ add_test(NAME nxd_host_plugin_load
             "$<TARGET_FILE:nxd_test_plugin_bad_table_size>"
             "$<TARGET_FILE:nxd_test_plugin_bad_fingerprint>"
             "$<TARGET_FILE:nxd_test_plugin_bad_descriptor_hash>"
-            "$<TARGET_FILE:nxd_test_plugin_bad_missing_fn>"
-            "$<TARGET_FILE:nxd_test_plugin_bad_extension>")
+            "$<TARGET_FILE:nxd_test_plugin_bad_missing_fn>")
 set_tests_properties(nxd_host_plugin_load PROPERTIES
-    DEPENDS "nxd_example_counter_cpp;nxd_test_plugin_bad_abi_version;nxd_test_plugin_bad_table_size;nxd_test_plugin_bad_fingerprint;nxd_test_plugin_bad_descriptor_hash;nxd_test_plugin_bad_missing_fn;nxd_test_plugin_bad_extension")
+    DEPENDS "nxd_example_counter_cpp;nxd_test_plugin_bad_abi_version;nxd_test_plugin_bad_table_size;nxd_test_plugin_bad_fingerprint;nxd_test_plugin_bad_descriptor_hash;nxd_test_plugin_bad_missing_fn")
 
 add_executable(nxd_host_component_lifecycle_test tests/host_component_lifecycle_test.cpp)
 target_link_libraries(nxd_host_component_lifecycle_test PRIVATE nxd_host)
@@ -496,6 +519,48 @@ add_test(NAME nxd_host_harness
             "$<TARGET_FILE:nxd_test_allocating_cpp>")
 set_tests_properties(nxd_host_harness PROPERTIES
     DEPENDS "nxd_example_empty_cpp;nxd_example_counter_cpp;nxd_test_allocating_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_port_io_test tests/host_port_io_test.cpp)
+target_link_libraries(nxd_host_port_io_test PRIVATE nxd_host)
+target_include_directories(nxd_host_port_io_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io")
+target_compile_options(nxd_host_port_io_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_test(NAME nxd_host_port_io
+    COMMAND nxd_host_port_io_test
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io/descriptor.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io/descriptor.hash"
+            "$<TARGET_FILE:nxd_test_port_io_cpp>")
+set_tests_properties(nxd_host_port_io PROPERTIES DEPENDS nxd_test_port_io_cpp)
+
+add_executable(nxd_host_port_io_golden_test tests/host_port_io_golden_test.cpp)
+target_link_libraries(nxd_host_port_io_golden_test PRIVATE nxd_host)
+target_include_directories(nxd_host_port_io_golden_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io")
+target_compile_options(nxd_host_port_io_golden_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_test(NAME nxd_host_port_io_golden
+    COMMAND nxd_host_port_io_golden_test
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io/descriptor.json"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io/descriptor.hash"
+            "$<TARGET_FILE:nxd_test_port_io_cpp>"
+            "${NXD_RUST_PORT_IO_SO}")
+set_tests_properties(nxd_host_port_io_golden PROPERTIES
+    DEPENDS "nxd_test_port_io_cpp;nxd_test_port_io_rust")
 
 # Child-process runner used by panic/failure-injection tests
 add_executable(nxd_host_child_runner tests/host_child_runner.cpp)

@@ -212,6 +212,17 @@ namespace nxd::host {
                     !parse_version_json(*contract_version, port.contract_version)) {
                     return false;
                 }
+                const auto contract_hash = item.find("contract_hash");
+                if (contract_hash != item.end()) {
+                    if (!contract_hash->is_string()) {
+                        return false;
+                    }
+                    const auto parsed = parse_hex_hash(contract_hash->get<std::string>());
+                    if (!parsed) {
+                        return false;
+                    }
+                    port.layout_hash = *parsed;
+                }
                 const auto required = item.find("required");
                 port.required =
                     (required != item.end() && required->is_boolean() && required->get<bool>());

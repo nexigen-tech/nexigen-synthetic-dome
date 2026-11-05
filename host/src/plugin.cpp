@@ -129,11 +129,7 @@ namespace nxd::host {
             return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
         }
 
-        if (t->extension != nullptr) {
-            ::dlclose(plugin.handle);
-            plugin.handle = nullptr;
-            return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-        }
+        // step_io is optional; null means the plugin uses the legacy step callback.
 
         if (descriptor.resources.requires_hardware_rt && !caps.hardware_rt) {
             ::dlclose(plugin.handle);

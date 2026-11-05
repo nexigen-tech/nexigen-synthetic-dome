@@ -59,7 +59,7 @@ const NxdAbiTable* nxd_abi_entry() {
     table.arm = arm;
     table.step = step;
     table.stop = stop;
-    table.extension = nullptr;
+    table.step_io = nullptr;
     return &table;
 }
 

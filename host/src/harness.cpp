@@ -53,6 +53,13 @@ namespace nxd::host {
         return component_->initialize(config.data(), config.size());
     }
 
+    void HeadlessHarness::configure_ports(std::vector<PortBinding> bindings) noexcept {
+        bindings_ = std::move(bindings);
+        if (component_) {
+            component_->configure_ports(bindings_);
+        }
+    }
+
     nexigen::core::Status HeadlessHarness::arm(std::uint64_t seed) noexcept {
         if (!component_) {
             return std::unexpected(nexigen::core::ErrorCode::NotInitialized);

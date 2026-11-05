@@ -7,7 +7,8 @@
 
 pub use nxd_abi::{
     NxdAbiFingerprint, NxdAbiTable, NxdAbiVersion, NxdArmFn, NxdComponentState, NxdCreateFn,
-    NxdDestroyFn, NxdFrameContext, NxdInitializeFn, NxdStatus, NxdStepFn, NxdStopFn,
+    NxdDestroyFn, NxdFrameContext, NxdInitializeFn, NxdPortIoBundle, NxdPortSlot, NxdStatus,
+    NxdStepFn, NxdStepIoFn, NxdStopFn,
     NXD_ERROR_ABI_MISMATCH, NXD_ERROR_ALREADY_INITIALIZED, NXD_ERROR_GENERAL,
     NXD_ERROR_INVALID_ARGUMENT, NXD_ERROR_NOT_INITIALIZED, NXD_ERROR_NOT_SUPPORTED,
     NXD_ERROR_OUT_OF_MEMORY, NXD_OK,
@@ -60,6 +61,48 @@ impl<'a, T: Copy> Port<'a, T> {
     }
 
     /// Returns the buffer as a mutable slice.
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        // SAFETY: constructed from valid raw parts and lifetime is bounded.
+        unsafe { slice::from_raw_parts_mut(self.data.as_ptr(), self.len) }
+    }
+}
+
+/// Writable typed output loan.
+///
+/// The component fills the loan during `step_io` and returns it.  The loan
+/// references host-owned memory and must not outlive the callback.
+pub struct OutputLoan<'a, T: Copy> {
+    data: NonNull<T>,
+    len: usize,
+    _life: PhantomData<&'a mut [T]>,
+}
+
+impl<'a, T: Copy> OutputLoan<'a, T> {
+    /// Creates an output loan from a raw pointer and element count.
+    ///
+    /// # Safety
+    ///
+    /// `ptr` must point to `len` valid, aligned elements of `T` that outlive
+    /// the loan and are writable by the component during the step.
+    pub unsafe fn from_raw_parts(ptr: *mut T, len: usize) -> Option<Self> {
+        Some(Self {
+            data: NonNull::new(ptr)?,
+            len,
+            _life: PhantomData,
+        })
+    }
+
+    /// Returns the number of elements in the loan.
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    /// Returns true if the loan contains no elements.
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    /// Returns the loan as a mutable slice.
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         // SAFETY: constructed from valid raw parts and lifetime is bounded.
         unsafe { slice::from_raw_parts_mut(self.data.as_ptr(), self.len) }
@@ -218,7 +261,43 @@ pub const unsafe fn build_abi_table(
         arm,
         step,
         stop,
-        extension: core::ptr::null_mut(),
+        step_io: None,
+    }
+}
+
+/// Helper to build an ABI-1 table with the optional `step_io` callback.
+///
+/// # Safety
+///
+/// All function pointers must satisfy the ABI-1 contract.
+#[allow(clippy::too_many_arguments)]
+pub const unsafe fn build_abi_table_with_step_io(
+    name: [c_char; 64],
+    version: NxdAbiVersion,
+    descriptor_hash: NxdAbiFingerprint,
+    create: NxdCreateFn,
+    destroy: NxdDestroyFn,
+    initialize: NxdInitializeFn,
+    arm: NxdArmFn,
+    step: NxdStepFn,
+    stop: NxdStopFn,
+    step_io: NxdStepIoFn,
+) -> NxdAbiTable {
+    NxdAbiTable {
+        abi_version: NxdAbiVersion::ABI_1,
+        table_size: core::mem::size_of::<NxdAbiTable>(),
+        fingerprint: NxdAbiFingerprint::ABI_1_TARGET,
+        sdk_layout_hash: NxdAbiFingerprint::ZERO,
+        component_name: name,
+        component_version: version,
+        descriptor_hash,
+        create,
+        destroy,
+        initialize,
+        arm,
+        step,
+        stop,
+        step_io: Some(step_io),
     }
 }
 

@@ -35,6 +35,7 @@ namespace nxd::host {
         std::string semantics;
         std::string contract_name;
         Version contract_version;
+        std::optional<std::array<std::uint8_t, 32>> layout_hash;
         bool required = false;
     };
 

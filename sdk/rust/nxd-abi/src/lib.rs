@@ -42,10 +42,10 @@ pub struct NxdAbiVersion {
 }
 
 impl NxdAbiVersion {
-    /// Current ABI table version.
+    /// Current ABI table version (minor bumped for typed port I/O).
     pub const ABI_1: Self = Self {
         major: 1,
-        minor: 0,
+        minor: 1,
         patch: 0,
     };
 }
@@ -127,6 +127,40 @@ pub type NxdStepFn =
 /// Stops the component and releases frame-only resources.
 pub type NxdStopFn = unsafe extern "C" fn(state: *mut NxdComponentState);
 
+/// Slot describing one typed input or output port buffer passed to `step_io`.
+#[repr(C)]
+pub struct NxdPortSlot {
+    /// FNV-1a hash of the port name.  The component matches this against the
+    /// hashes of the ports it declared in its descriptor.
+    pub port_name_hash: u64,
+    /// Pointer to the first byte of the typed buffer.
+    pub data: *mut c_void,
+    /// Number of elements of the port's contract type in the buffer.
+    pub count: usize,
+    /// Size of one element in bytes.
+    pub element_size: usize,
+    /// Layout hash of the contract type (32 bytes).
+    pub layout_hash: NxdAbiFingerprint,
+}
+
+/// Bundle of port slots passed to the optional `step_io` callback.
+#[repr(C)]
+pub struct NxdPortIoBundle {
+    /// Number of slots in the bundle.
+    pub count: usize,
+    /// Pointer to the array of `count` slots.
+    pub slots: *mut NxdPortSlot,
+}
+
+/// Optional extended step callback that receives typed input/output port
+/// buffers.  When null, the host falls back to the legacy `step` callback.
+pub type NxdStepIoFn = unsafe extern "C" fn(
+    state: *mut NxdComponentState,
+    ctx: *const NxdFrameContext,
+    inputs: *const NxdPortIoBundle,
+    outputs: *mut NxdPortIoBundle,
+) -> NxdStatus;
+
 /// ABI-1 plugin table.  Each shared library exports exactly one symbol that
 /// returns a pointer to this table.
 ///
@@ -150,9 +184,12 @@ pub struct NxdAbiTable {
     pub arm: NxdArmFn,
     pub step: NxdStepFn,
     pub stop: NxdStopFn,
-    /// Must be null for ABI-1.
-    pub extension: *mut c_void,
+    /// Optional extended step callback for port-aware components.  `None` for
+    /// legacy port-less plugins; when `Some` the host invokes it for port I/O.
+    /// `Option<fn>` has the same layout as a nullable function pointer in C.
+    pub step_io: Option<NxdStepIoFn>,
 }
+
 
 impl NxdAbiTable {
     /// Expected table size for ABI-1.  The host rejects plugins whose
@@ -213,5 +250,18 @@ mod tests {
     fn function_pointers_are_c_abi() {
         assert_eq!(size_of::<NxdCreateFn>(), size_of::<*const c_void>());
         assert_eq!(size_of::<NxdStepFn>(), size_of::<*const c_void>());
+        assert_eq!(size_of::<NxdStepIoFn>(), size_of::<*const c_void>());
+    }
+
+    #[test]
+    fn port_slot_is_sized_for_c_layout() {
+        assert!(size_of::<NxdPortSlot>() > 0);
+        assert_eq!(size_of::<NxdPortSlot>() % align_of::<*const c_void>(), 0);
+    }
+
+    #[test]
+    fn port_io_bundle_is_sized_for_c_layout() {
+        assert!(size_of::<NxdPortIoBundle>() > 0);
+        assert_eq!(size_of::<NxdPortIoBundle>() % align_of::<*const c_void>(), 0);
     }
 }

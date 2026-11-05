@@ -29,7 +29,8 @@ Key invariants validated by the host before `initialize`:
 * `component_name` and `component_version` match the descriptor
 * `descriptor_hash` matches the generated sidecar `.hash` file
 * All six lifecycle function pointers are non-null
-* `extension` is null (reserved for future ABI versions)
+* `step_io` is null for legacy port-less plugins, non-null for port-aware
+  plugins
 * Required hardware-RT resources are not requested unless the host advertises
   them
 
@@ -86,7 +87,7 @@ extern "C" const NxdAbiTable* nxd_abi_entry() {
     table.arm = arm;
     table.step = step;
     table.stop = stop;
-    table.extension = nullptr;
+    table.step_io = nullptr;   // set to step_io callback for port-aware plugins
     return &table;
 }
 ```
@@ -131,6 +132,67 @@ The workspace profile sets `panic = "abort"`.  A Rust panic must never unwind
 across the C boundary; provide a `#[panic_handler]` that terminates the
 process (for example `libc::abort`).
 
+## Typed port I/O
+
+Port-aware plugins implement `step_io` instead of (or in addition to) the
+legacy `step` callback.  The host provides typed input views and writable
+output loans indexed by port name hash.
+
+### C++
+
+```cpp
+struct Sample { uint64_t sequence; int64_t value; };
+
+NxdStatus step_io(NxdComponentState*, const NxdFrameContext*,
+                  const NxdPortIoBundle* inputs, NxdPortIoBundle* outputs) {
+    nxd::Port<Sample> in(inputs->slots[0]);
+    nxd::OutputLoan<Sample> out(outputs->slots[0]);
+    if (in.as_span().empty() || out.as_span().empty()) {
+        return NXD_ERROR_INVALID_ARGUMENT;
+    }
+    out.as_span()[0].sequence = in.as_span()[0].sequence;
+    out.as_span()[0].value    = in.as_span()[0].value + 1;
+    return NXD_OK;
+}
+```
+
+`nxd::Port<T>` is a read-only view; `nxd::OutputLoan<T>` is a writable loan.
+Both are zero-allocation wrappers around `NxdPortSlot` and are valid only for
+the duration of the callback.
+
+### Rust
+
+```rust
+use nxd_sdk::{Port, OutputLoan};
+
+#[repr(C)]
+struct Sample { sequence: u64, value: i64 }
+
+unsafe extern "C" fn step_io(
+    _state: *mut NxdComponentState,
+    _ctx: *const NxdFrameContext,
+    inputs: *const NxdPortIoBundle,
+    outputs: *mut NxdPortIoBundle,
+) -> NxdStatus {
+    let in_slots = &(*inputs).slots;
+    let out_slots = &mut (*outputs).slots;
+    let input = Port::<Sample>::from_raw_parts((*in_slots).data as *const Sample,
+                                               (*in_slots).count).unwrap();
+    let mut output = OutputLoan::<Sample>::from_raw_parts((*out_slots).data as *mut Sample,
+                                                          (*out_slots).count).unwrap();
+    output.as_mut_slice()[0].sequence = input.as_span()[0].sequence;
+    output.as_mut_slice()[0].value    = input.as_span()[0].value + 1;
+    NXD_OK
+}
+```
+
+### Layout-hash rule
+
+Every port binding carries a 32-byte `layout_hash` that must match the
+`contract_hash` declared in the component descriptor.  The host checks this
+before arming and returns `NXD_ERROR_ABI_MISMATCH` for any mismatch, ensuring
+that the plugin's generated type layout is exactly what the plan expects.
+
 ## Descriptor hash
 
 `nxdc emit-component-descriptor <component.yaml> <out.json>` writes the
@@ -172,6 +234,8 @@ Tests in `tests/` cover:
 * Thread role validation and best-effort application (`nxd_host_thread_roles`)
 * Headless harness for empty, counter, and allocating components
   (`nxd_host_harness`)
+* Typed port I/O end-to-end and layout-hash mismatch (`nxd_host_port_io`)
+* Cross-language port I/O golden equivalence (`nxd_host_port_io_golden`)
 * Child-process panic and failure injection (`nxd_host_panic_failure`)
 * Empty-component ABI overhead benchmark (`nxd_host_empty_benchmark`)
 

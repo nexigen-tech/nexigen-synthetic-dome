@@ -59,7 +59,7 @@ const NxdAbiTable* nxd_abi_entry() {
     table.arm = arm;
     table.step = step;
     table.stop = stop;
-    table.extension = nullptr;
+    table.step_io = nullptr;
 
 #if defined(BAD_ABI_VERSION)
     table.abi_version = NxdAbiVersion{2, 0, 0};
@@ -82,10 +82,6 @@ const NxdAbiTable* nxd_abi_entry() {
 
 #if defined(BAD_MISSING_FN)
     table.step = nullptr;
-#endif
-
-#if defined(BAD_EXTENSION)
-    table.extension = &table;
 #endif
 
     return &table;

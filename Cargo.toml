@@ -8,6 +8,7 @@ members = [
     "examples/components/rust/counter",
     "tests/components/rust/alloc_counter",
     "tests/components/rust/panic_step",
+    "tests/components/rust/port_io",
 ]
 
 [workspace.package]

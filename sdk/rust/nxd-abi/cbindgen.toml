@@ -19,5 +19,5 @@ tab_width = 4
 parse_deps = false
 
 [export]
-include = ["NxdAbiVersion", "NxdAbiFingerprint", "NxdFrameContext", "NxdTelemetryHandle", "NxdComponentState", "NxdAbiTable", "NxdCreateFn", "NxdDestroyFn", "NxdInitializeFn", "NxdArmFn", "NxdStepFn", "NxdStopFn", "NxdAbiEntryFn"]
+include = ["NxdAbiVersion", "NxdAbiFingerprint", "NxdFrameContext", "NxdTelemetryHandle", "NxdComponentState", "NxdAbiTable", "NxdCreateFn", "NxdDestroyFn", "NxdInitializeFn", "NxdArmFn", "NxdStepFn", "NxdStopFn", "NxdAbiEntryFn", "NxdPortSlot", "NxdPortIoBundle", "NxdStepIoFn"]
 exclude = ["ZERO", "ABI_1_TARGET", "ABI_1_SIZE"]

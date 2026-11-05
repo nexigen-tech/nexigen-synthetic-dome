@@ -113,11 +113,11 @@ namespace {
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 10) {
+    if (argc < 9) {
         std::cerr << "usage: " << argv[0]
                   << " <descriptor.json> <descriptor.hash> <valid-plugin.so>"
                      " <bad-abi-version.so> <bad-table-size.so> <bad-fingerprint.so>"
-                     " <bad-descriptor-hash.so> <bad-missing-fn.so> <bad-extension.so>\n";
+                     " <bad-descriptor-hash.so> <bad-missing-fn.so>\n";
         return 1;
     }
 
@@ -129,7 +129,6 @@ int main(int argc, char** argv) {
     const char* bad_fingerprint = argv[6];
     const char* bad_descriptor_hash = argv[7];
     const char* bad_missing_fn = argv[8];
-    const char* bad_extension = argv[9];
 
     if (!valid_load(descriptor_path, hash_path, valid_plugin)) {
         return 2;
@@ -150,14 +149,11 @@ int main(int argc, char** argv) {
     if (!invalid_load_is_rejected(descriptor_path, hash_path, bad_missing_fn, "missing fn")) {
         return 7;
     }
-    if (!invalid_load_is_rejected(descriptor_path, hash_path, bad_extension, "extension")) {
+    if (!identity_mismatch_is_rejected(descriptor_path, hash_path, valid_plugin)) {
         return 8;
     }
-    if (!identity_mismatch_is_rejected(descriptor_path, hash_path, valid_plugin)) {
-        return 9;
-    }
     if (!hardware_rt_rejected(descriptor_path, hash_path, valid_plugin)) {
-        return 10;
+        return 9;
     }
 
     std::cout << "ok\n";

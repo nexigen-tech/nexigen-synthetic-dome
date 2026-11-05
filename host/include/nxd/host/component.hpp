@@ -1,13 +1,28 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
 
 #include "nxd/abi.hpp"
+#include "nxd/host/descriptor.hpp"
 #include "nxd/host/plugin.hpp"
 #include <nexigen/core/result.hpp>
 
 namespace nxd::host {
+
+    /// Binding for one typed port on a component instance.
+    struct PortBinding {
+        std::string name;
+        PortDescriptor::Direction direction = PortDescriptor::Direction::In;
+        std::size_t element_size = 0;
+        std::size_t count = 0;
+        std::optional<std::array<std::uint8_t, 32>> layout_hash;
+        std::vector<std::byte> buffer;
+    };
 
     /// RAII wrapper around a plugin component lifecycle.
     ///
@@ -26,7 +41,13 @@ namespace nxd::host {
 
         [[nodiscard]] nexigen::core::Status create() noexcept;
         [[nodiscard]] nexigen::core::Status initialize(const char* config,
-                                                       std::size_t config_len) noexcept;
+                                                        std::size_t config_len) noexcept;
+
+        /// Configures typed port bindings.  Must be called after `create` and
+        /// before `arm`.  The host validates bindings against the descriptor
+        /// and the plugin's extended callback during `arm`.
+        void configure_ports(std::vector<PortBinding> bindings) noexcept;
+
         [[nodiscard]] nexigen::core::Status arm(const NxdFrameContext* ctx) noexcept;
         [[nodiscard]] nexigen::core::Status step(const NxdFrameContext* ctx) noexcept;
 
@@ -48,13 +69,25 @@ namespace nxd::host {
         [[nodiscard]] bool armed() const noexcept {
             return armed_;
         }
+        [[nodiscard]] const std::vector<PortBinding>& port_bindings() const noexcept {
+            return bindings_;
+        }
+        [[nodiscard]] std::vector<PortBinding>& port_bindings() noexcept {
+            return bindings_;
+        }
 
       private:
         void do_stop() noexcept;
         void destroy() noexcept;
 
+        [[nodiscard]] bool validate_port_bindings() noexcept;
+        [[nodiscard]] NxdStatus invoke_step_io(const NxdFrameContext* ctx) noexcept;
+
         const LoadedPlugin* plugin_;
         NxdComponentState* state_ = nullptr;
+        std::vector<PortBinding> bindings_;
+        std::vector<NxdPortSlot> input_slots_;
+        std::vector<NxdPortSlot> output_slots_;
         bool initialized_ = false;
         bool armed_ = false;
         bool stopped_ = false;

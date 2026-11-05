@@ -80,7 +80,7 @@ namespace nxd {
         const NxdFrameContext& ctx_;
     };
 
-    /// Typed view of a port buffer.
+    /// Typed view of an input port buffer.
     ///
     /// `Port` carries no allocation and is valid only for the duration of the
     /// callback that produced it.
@@ -93,7 +93,46 @@ namespace nxd {
         /// Creates a port view from a raw pointer and element count.
         /// `ptr` must point to `count` valid, aligned elements of `T` that
         /// outlive this view.
-        Port(T* ptr, std::size_t count) noexcept : span_(ptr, count) {}
+        Port(const T* ptr, std::size_t count) noexcept : span_(ptr, count) {}
+
+        /// Creates a port view from an ABI port slot.
+        explicit Port(const NxdPortSlot& slot) noexcept
+            : span_(static_cast<const T*>(slot.data), slot.count) {}
+
+        [[nodiscard]] std::span<const T> as_span() const noexcept {
+            return span_;
+        }
+        [[nodiscard]] bool empty() const noexcept {
+            return span_.empty();
+        }
+        [[nodiscard]] std::size_t size() const noexcept {
+            return span_.size();
+        }
+
+      private:
+        std::span<const T> span_;
+    };
+
+    /// Writable typed output loan.
+    ///
+    /// The component fills the loan during the extended step callback and
+    /// returns it; the loan references host-owned memory and must not outlive
+    /// the callback.
+    template <typename T> class OutputLoan {
+        static_assert(std::is_trivially_copyable_v<T>,
+                      "OutputLoan element must be trivially copyable");
+
+      public:
+        constexpr OutputLoan() noexcept = default;
+
+        /// Creates an output loan from a raw pointer and element count.
+        /// `ptr` must point to `count` valid, aligned, writable elements of
+        /// `T` that outlive this loan.
+        OutputLoan(T* ptr, std::size_t count) noexcept : span_(ptr, count) {}
+
+        /// Creates an output loan from an ABI port slot.
+        explicit OutputLoan(NxdPortSlot& slot) noexcept
+            : span_(static_cast<T*>(slot.data), slot.count) {}
 
         [[nodiscard]] std::span<T> as_span() noexcept {
             return span_;

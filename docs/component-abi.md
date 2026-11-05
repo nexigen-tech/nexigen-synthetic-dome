@@ -61,8 +61,10 @@ never calls lifecycle functions concurrently for the same component instance.
 
 ## The ABI table
 
-`NxdAbiTable` is a plain `#[repr(C)]` / `extern "C"` struct.  All function
-pointers must be non-null for ABI-1; `extension` must be null.
+`NxdAbiTable` is a plain `#[repr(C)]` / `extern "C"` struct.  All lifecycle
+function pointers must be non-null for ABI-1.  The optional `step_io` pointer
+is null for legacy port-less plugins; port-aware plugins set it to a valid
+callback.
 
 ```c
 typedef struct {
@@ -79,7 +81,7 @@ typedef struct {
     NxdArmFn arm;
     NxdStepFn step;
     NxdStopFn stop;
-    void* extension;
+    NxdStepIoFn step_io;
 } NxdAbiTable;
 ```
 
@@ -113,6 +115,48 @@ typedef struct {
 
 The context exposes no wall-clock time, physical channels, CPU affinity, or
 endpoints.
+
+## Typed port I/O
+
+Port-aware plugins declare input and output ports in their component
+descriptor.  During `arm` the host validates every required port against the
+plan binding, allocates a typed buffer per port, and passes the buffers to the
+optional `step_io` callback on every frame:
+
+```c
+typedef struct {
+    uint64_t port_name_hash;
+    void* data;
+    uintptr_t count;
+    uintptr_t element_size;
+    NxdAbiFingerprint layout_hash;
+} NxdPortSlot;
+
+typedef struct {
+    uintptr_t count;
+    NxdPortSlot* slots;
+} NxdPortIoBundle;
+
+typedef NxdStatus (*NxdStepIoFn)(
+    NxdComponentState* state,
+    const NxdFrameContext* ctx,
+    const NxdPortIoBundle* inputs,
+    NxdPortIoBundle* outputs);
+```
+
+The host fills `port_name_hash` with the FNV-1a hash of the port name,
+`data` with a writable buffer sized to `count * element_size` bytes, and
+`layout_hash` with the 32-byte contract layout hash from the descriptor.
+Input slots are read-only from the plugin's point of view; output slots are
+writable loans that the plugin fills and returns.
+
+The host rejects arming with `NXD_ERROR_ABI_MISMATCH` when:
+
+* a required port has no binding,
+* a binding's direction does not match the descriptor,
+* the binding's `element_size` or `count` is zero,
+* the binding's `layout_hash` differs from the descriptor's `contract_hash`,
+* the plugin exports no `step_io` callback but the descriptor declares ports.
 
 ## Ownership and buffer lifetimes
 

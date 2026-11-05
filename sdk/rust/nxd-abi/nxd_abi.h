@@ -17,6 +17,7 @@ static const uint8_t NXD_ABI_1_TARGET[32] = {
 #include <stdint.h>
 #include <stdlib.h>
 
+
 /**
  * Numeric status code returned by every lifecycle function.
  */
@@ -31,9 +32,9 @@ typedef struct {
     uint32_t patch;
 } NxdAbiVersion;
 /**
- * Current ABI table version.
+ * Current ABI table version (minor bumped for typed port I/O).
  */
-#define NxdAbiVersion_ABI_1 (NxdAbiVersion){ .major = 1, .minor = 0, .patch = 0 }
+#define NxdAbiVersion_ABI_1 (NxdAbiVersion){ .major = 1, .minor = 1, .patch = 0 }
 
 /**
  * 32-byte ABI fingerprint used for target/layout validation.
@@ -112,6 +113,56 @@ typedef NxdStatus (*NxdStepFn)(NxdComponentState *state, const NxdFrameContext *
 typedef void (*NxdStopFn)(NxdComponentState *state);
 
 /**
+ * Slot describing one typed input or output port buffer passed to `step_io`.
+ */
+typedef struct {
+    /**
+     * FNV-1a hash of the port name.  The component matches this against the
+     * hashes of the ports it declared in its descriptor.
+     */
+    uint64_t port_name_hash;
+    /**
+     * Pointer to the first byte of the typed buffer.
+     */
+    void *data;
+    /**
+     * Number of elements of the port's contract type in the buffer.
+     */
+    uintptr_t count;
+    /**
+     * Size of one element in bytes.
+     */
+    uintptr_t element_size;
+    /**
+     * Layout hash of the contract type (32 bytes).
+     */
+    NxdAbiFingerprint layout_hash;
+} NxdPortSlot;
+
+/**
+ * Bundle of port slots passed to the optional `step_io` callback.
+ */
+typedef struct {
+    /**
+     * Number of slots in the bundle.
+     */
+    uintptr_t count;
+    /**
+     * Pointer to the array of `count` slots.
+     */
+    NxdPortSlot *slots;
+} NxdPortIoBundle;
+
+/**
+ * Optional extended step callback that receives typed input/output port
+ * buffers.  When null, the host falls back to the legacy `step` callback.
+ */
+typedef NxdStatus (*NxdStepIoFn)(NxdComponentState *state,
+                                 const NxdFrameContext *ctx,
+                                 const NxdPortIoBundle *inputs,
+                                 NxdPortIoBundle *outputs);
+
+/**
  * ABI-1 plugin table.  Each shared library exports exactly one symbol that
  * returns a pointer to this table.
  *
@@ -138,9 +189,11 @@ typedef struct {
     NxdStepFn step;
     NxdStopFn stop;
     /**
-     * Must be null for ABI-1.
+     * Optional extended step callback for port-aware components.  `None` for
+     * legacy port-less plugins; when `Some` the host invokes it for port I/O.
+     * `Option<fn>` has the same layout as a nullable function pointer in C.
      */
-    void *extension;
+    NxdStepIoFn step_io;
 } NxdAbiTable;
 
 /**
@@ -150,6 +203,8 @@ typedef struct {
  * library mapping.  The table itself is read-only from the host side.
  */
 typedef const NxdAbiTable *(*NxdAbiEntryFn)(void);
+
+
 
 /**
  * Operation completed successfully.

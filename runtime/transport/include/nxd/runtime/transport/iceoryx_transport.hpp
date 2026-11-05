@@ -2,15 +2,16 @@
 
 #include "nxd/runtime/transport/transport.hpp"
 
+#include <memory>
+
 namespace nxd::runtime::transport {
 
-/// Placeholder for an iceoryx2-backed multi-process transport.
+/// iceoryx2-backed multi-process transport.
 ///
-/// This implementation is intentionally a stub: iceoryx2 is not yet a project
-/// or system dependency.  Once iceoryx2 is available, this class will create
-/// publishers/subscribers keyed by source name and exchange samples between
-/// processes.  Until then all creation functions return nullptr so callers can
-/// detect the missing backend.
+/// Uses the `iceoryx2` C bindings to exchange samples between processes via
+/// shared memory.  Each logical source name maps to one iceoryx2 pub/sub
+/// service.  The transport owns a single node and all publishers/subscribers
+/// created through it.
 class IceoryxTransport final : public Transport {
   public:
     IceoryxTransport() noexcept;
@@ -31,6 +32,10 @@ class IceoryxTransport final : public Transport {
                                                  std::size_t max_count,
                                                  const std::array<std::uint8_t, 32>&
                                                      layout_hash) noexcept override;
+
+  private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 } // namespace nxd::runtime::transport

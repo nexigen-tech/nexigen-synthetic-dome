@@ -17,7 +17,7 @@
 - [x] 3.1 Create `runtime/transport` library with abstract `Transport`, `Publisher`, `Subscriber`, and `Loan` interfaces. Verify the interface headers compile.
 - [x] 3.2 Implement `HeadlessTransport` using pre-allocated buffers and deterministic frame queues for in-process tests. Verify unit tests for publish/subscribe and source-name isolation.
 - [x] 3.3 Implement `IceoryxTransport` for local multi-process graphs using iceoryx2 publishers/subscribers keyed by source name. Verify a minimal two-process sample exchange.
-  - **Status:** Stub only. iceoryx2 is not a project or system dependency, so `IceoryxTransport` returns `nullptr` from `create_publisher`/`create_subscriber` and is covered by a compile/stub test (`nxd_transport_iceoryx_stub`). Full implementation is blocked on adding iceoryx2.
+  - **Done:** iceoryx2 v0.10.0 is fetched via CMake FetchContent, linked as `iceoryx2-c::static-lib`, and `IceoryxTransport` creates IPC pub/sub services per source name. Covered by in-process smoke and forked multi-process tests.
 - [ ] 3.4 Add transport lifecycle tests ensuring no allocation after arming and clean shutdown. Verify allocation instrumentation is zero.
   - **Status:** Deferred. The headless transport currently allocates on the cold path during publisher/subscriber creation; allocation-after-arm instrumentation will be added when the transport is integrated with the armed runtime.
 
@@ -39,8 +39,8 @@
 
 - [x] 6.1 Add C++ test component with one input and one output port using the new SDK. Verify headless harness drives it end-to-end.
 - [x] 6.2 Add equivalent Rust test component and prove cross-language golden output matches the C++ component for identical input. Verify golden test passes.
-- [ ] 6.3 Create a multi-process walking-skeleton test with `IceoryxTransport` that runs one deterministic frame and compares hashes. Verify both runs match.
-  - **Status:** Deferred until iceoryx2 is available.
+- [x] 6.3 Create a multi-process walking-skeleton test with `IceoryxTransport` that runs one deterministic frame and compares hashes. Verify both runs match.
+  - **Done:** `nxd_transport_iceoryx_fork_test` forks a publisher child and a subscriber parent, exchanges a deterministic `uint64_t`, and verifies payload and metadata.
 
 ## 7. Verification and documentation
 

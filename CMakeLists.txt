@@ -3,6 +3,20 @@ project(nexigen-synthetic-dome VERSION 0.1.0 LANGUAGES CXX)
 
 enable_testing()
 
+# ------------------------------------------------------------------------------
+# iceoryx2 zero-copy IPC dependency
+# ------------------------------------------------------------------------------
+include(FetchContent)
+FetchContent_Declare(
+    iceoryx2
+    GIT_REPOSITORY https://github.com/eclipse-iceoryx/iceoryx2.git
+    GIT_TAG v0.10.0
+    GIT_SHALLOW TRUE)
+set(BUILD_CXX OFF CACHE BOOL "" FORCE)
+set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(iceoryx2)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

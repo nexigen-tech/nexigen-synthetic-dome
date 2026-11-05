@@ -99,6 +99,11 @@ add_subdirectory(runtime/chronos)
 add_subdirectory(runtime/composer)
 
 # -----------------------------------------------------------------------------
+# Walking-skeleton runner
+# -----------------------------------------------------------------------------
+add_subdirectory(tools/nexigen-run)
+
+# -----------------------------------------------------------------------------
 # Static library that validates every generated contract header.
 # -----------------------------------------------------------------------------
 # Each generated header is compiled in its own translation unit.  This lets the

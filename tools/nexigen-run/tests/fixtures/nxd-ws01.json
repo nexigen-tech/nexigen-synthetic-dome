@@ -1,0 +1,25 @@
+{
+  "version_major": 1,
+  "version_minor": 0,
+  "chronos": {
+    "mode": 3,
+    "base_frame_interval_ns": 1000000,
+    "scale_factor": 1
+  },
+  "partitions": [
+    {
+      "id": 1,
+      "name": "p1",
+      "instance_ids": ["echo"]
+    }
+  ],
+  "let_boundaries": [],
+  "wires": [],
+  "processes": [
+    {
+      "id": "echo_proc",
+      "executable": "./nxd-ws01-echo",
+      "instance_ids": ["echo"]
+    }
+  ]
+}

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <format>
 #include <ranges>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace nxd::runtime::composer {
@@ -155,10 +156,21 @@ contracts_incompatibility(const nxd::host::PortDescriptor& source,
     return std::nullopt;
 }
 
+[[nodiscard]] const nxd::host::ThreadRoleDescriptor*
+find_thread_role(const nxd::host::ComponentDescriptor& descriptor,
+                 const std::string& role_name) noexcept {
+    for (const auto& role : descriptor.thread_roles) {
+        if (role.name == role_name) {
+            return &role;
+        }
+    }
+    return nullptr;
+}
+
 void validate_instance(const SystemManifest& manifest,
-                           const Instance& instance,
-                           const nxd::host::ComponentDescriptor& descriptor,
-                           std::vector<ValidationDiagnostic>& diagnostics) noexcept {
+                       const Instance& instance,
+                       const nxd::host::ComponentDescriptor& descriptor,
+                       std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     // Required ports.
     for (const auto& port : descriptor.ports) {
         if (!port.required) {
@@ -233,6 +245,57 @@ void validate_instance(const SystemManifest& manifest,
                 "instance '{}' of component '{}' does not support chronos mode '{}'",
                 instance.id, descriptor.name, mode_name),
             std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name));
+    }
+
+    // Hardware-time requirement: non-RT modes cannot use components that require
+    // hardware real-time timing.
+    if (manifest.chronos.mode != 0 && descriptor.resources.requires_hardware_rt) {
+        diagnostics.push_back(make_diagnostic(
+            std::format(
+                "instance '{}' of component '{}' requires hardware real-time timing, "
+                "which is unavailable in chronos mode '{}'",
+                instance.id, descriptor.name, mode_name),
+            std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name));
+    }
+
+    // Assigned thread roles must be declared by the descriptor and must not be
+    // duplicated within the same instance.
+    std::unordered_set<std::string> seen_assigned_roles;
+    for (const auto& assignment : instance.thread_roles) {
+        if (assignment.role.empty()) {
+            diagnostics.push_back(make_diagnostic(
+                std::format("instance '{}' has an empty thread role name", instance.id),
+                std::nullopt, std::nullopt, "", "", "", "", instance.id,
+                descriptor.name));
+            continue;
+        }
+        if (assignment.thread.empty()) {
+            diagnostics.push_back(make_diagnostic(
+                std::format(
+                    "instance '{}' thread role '{}' has no thread assignment",
+                    instance.id, assignment.role),
+                std::nullopt, std::nullopt, "", "", "", "", instance.id,
+                descriptor.name, "", assignment.role));
+            continue;
+        }
+        if (!seen_assigned_roles.insert(assignment.role).second) {
+            diagnostics.push_back(make_diagnostic(
+                std::format(
+                    "instance '{}' thread role '{}' is assigned more than once",
+                    instance.id, assignment.role),
+                std::nullopt, std::nullopt, "", "", "", "", instance.id,
+                descriptor.name, "", assignment.role));
+            continue;
+        }
+        const auto* role_desc = find_thread_role(descriptor, assignment.role);
+        if (role_desc == nullptr) {
+            diagnostics.push_back(make_diagnostic(
+                std::format(
+                    "instance '{}' of component '{}' assigns undeclared thread role '{}'",
+                    instance.id, descriptor.name, assignment.role),
+                std::nullopt, std::nullopt, "", "", "", "", instance.id,
+                descriptor.name, "", assignment.role));
+        }
     }
 }
 
@@ -373,6 +436,34 @@ std::vector<ValidationDiagnostic> validate_against_descriptors(
             continue;
         }
         validate_instance(manifest, instance, *descriptor, diagnostics);
+    }
+
+    // Global thread-role consistency: the same role must map to the same thread
+    // across all instances.  Duplicates within a single instance are handled
+    // by validate_instance(), so the global check only needs the first distinct
+    // thread per role per instance.
+    std::unordered_map<std::string, std::string> role_to_thread;
+    for (const auto& instance : manifest.instances) {
+        std::unordered_map<std::string, std::string> local;
+        for (const auto& assignment : instance.thread_roles) {
+            if (assignment.role.empty() || assignment.thread.empty()) {
+                continue;
+            }
+            local.emplace(assignment.role, assignment.thread);
+        }
+        for (const auto& [role, thread] : local) {
+            const auto it = role_to_thread.find(role);
+            if (it == role_to_thread.end()) {
+                role_to_thread.emplace(role, thread);
+            } else if (it->second != thread) {
+                diagnostics.push_back(make_diagnostic(
+                    std::format(
+                        "thread role '{}' is assigned to both '{}' and '{}'",
+                        role, it->second, thread),
+                    std::nullopt, std::nullopt, "", "", "", "", instance.id,
+                    instance.component_name, "", role));
+            }
+        }
     }
 
     for (const auto& wire : manifest.wires) {

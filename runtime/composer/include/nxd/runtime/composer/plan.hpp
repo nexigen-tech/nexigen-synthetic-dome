@@ -37,6 +37,24 @@ struct LetBoundary final {
     [[nodiscard]] bool operator==(const LetBoundary&) const noexcept = default;
 };
 
+/// Thread-role assignment resolved for a single instance.
+struct PlanThreadRoleAssignment final {
+    std::string instance_id;
+    std::string role;
+    std::string thread;
+
+    [[nodiscard]] bool operator==(const PlanThreadRoleAssignment&) const noexcept = default;
+};
+
+/// Parameter assignment resolved for a single instance.
+struct PlanParameterAssignment final {
+    std::string instance_id;
+    std::string name;
+    std::int64_t value = 0;
+
+    [[nodiscard]] bool operator==(const PlanParameterAssignment&) const noexcept = default;
+};
+
 /// A partition groups components that share the same frame context and may
 /// communicate directly without an explicit LET boundary.
 struct Partition final {
@@ -86,6 +104,8 @@ struct DomePlan final {
     std::vector<LetBoundary> let_boundaries;
     std::vector<Wire> wires;
     std::vector<Process> processes;
+    std::vector<PlanThreadRoleAssignment> thread_role_assignments;
+    std::vector<PlanParameterAssignment> parameter_assignments;
 
     /// Serializes the plan to a JSON string.
     [[nodiscard]] std::string to_json() const;

@@ -56,6 +56,18 @@ int main() {
         .instance_ids = {"pid_1", "mixer_1", "plant_1"},
     });
 
+    plan.thread_role_assignments.push_back(composer::PlanThreadRoleAssignment{
+        .instance_id = "pid_1",
+        .role = "control",
+        .thread = "t0",
+    });
+
+    plan.parameter_assignments.push_back(composer::PlanParameterAssignment{
+        .instance_id = "pid_1",
+        .name = "kp",
+        .value = 10,
+    });
+
     const std::string json = plan.to_json();
     if (json.empty()) return 1;
 

@@ -180,6 +180,60 @@ namespace {
     return p;
 }
 
+[[nodiscard]] nlohmann::json thread_role_assignment_to_json(const PlanThreadRoleAssignment& t) {
+    nlohmann::json j;
+    j["instance_id"] = t.instance_id;
+    j["role"] = t.role;
+    j["thread"] = t.thread;
+    return j;
+}
+
+[[nodiscard]] std::optional<PlanThreadRoleAssignment>
+thread_role_assignment_from_json(const nlohmann::json& item) {
+    if (!item.is_object()) {
+        return std::nullopt;
+    }
+    PlanThreadRoleAssignment t;
+    const auto instance_id = item.find("instance_id");
+    const auto role = item.find("role");
+    const auto thread = item.find("thread");
+    if (instance_id == item.end() || !instance_id->is_string() || role == item.end() ||
+        !role->is_string() || thread == item.end() || !thread->is_string()) {
+        return std::nullopt;
+    }
+    t.instance_id = instance_id->get<std::string>();
+    t.role = role->get<std::string>();
+    t.thread = thread->get<std::string>();
+    return t;
+}
+
+[[nodiscard]] nlohmann::json parameter_assignment_to_json(const PlanParameterAssignment& p) {
+    nlohmann::json j;
+    j["instance_id"] = p.instance_id;
+    j["name"] = p.name;
+    j["value"] = p.value;
+    return j;
+}
+
+[[nodiscard]] std::optional<PlanParameterAssignment>
+parameter_assignment_from_json(const nlohmann::json& item) {
+    if (!item.is_object()) {
+        return std::nullopt;
+    }
+    PlanParameterAssignment p;
+    const auto instance_id = item.find("instance_id");
+    const auto name = item.find("name");
+    const auto value = item.find("value");
+    if (instance_id == item.end() || !instance_id->is_string() || name == item.end() ||
+        !name->is_string() || value == item.end() || !value->is_number_integer()) {
+        return std::nullopt;
+    }
+    p.instance_id = instance_id->get<std::string>();
+    p.name = name->get<std::string>();
+    p.value = value->get<std::int64_t>();
+    return p;
+}
+
 [[nodiscard]] nlohmann::json chronos_config_to_json(const PlanChronosConfig& c) {
     nlohmann::json j;
     j["mode"] = c.mode;
@@ -238,6 +292,18 @@ std::string DomePlan::to_json() const {
         processes_json.push_back(process_to_json(p));
     }
     obj["processes"] = std::move(processes_json);
+
+    auto thread_roles_json = nlohmann::json::array();
+    for (const auto& t : thread_role_assignments) {
+        thread_roles_json.push_back(thread_role_assignment_to_json(t));
+    }
+    obj["thread_role_assignments"] = std::move(thread_roles_json);
+
+    auto parameters_json = nlohmann::json::array();
+    for (const auto& p : parameter_assignments) {
+        parameters_json.push_back(parameter_assignment_to_json(p));
+    }
+    obj["parameter_assignments"] = std::move(parameters_json);
 
     return obj.dump(2);
 }
@@ -318,6 +384,34 @@ std::optional<DomePlan> DomePlan::from_json(std::string_view json) {
             return std::nullopt;
         }
         plan.processes.push_back(*parsed);
+    }
+
+    const auto thread_roles_it = obj.find("thread_role_assignments");
+    if (thread_roles_it != obj.end()) {
+        if (!thread_roles_it->is_array()) {
+            return std::nullopt;
+        }
+        for (const auto& item : *thread_roles_it) {
+            const auto parsed = thread_role_assignment_from_json(item);
+            if (!parsed.has_value()) {
+                return std::nullopt;
+            }
+            plan.thread_role_assignments.push_back(*parsed);
+        }
+    }
+
+    const auto parameters_it = obj.find("parameter_assignments");
+    if (parameters_it != obj.end()) {
+        if (!parameters_it->is_array()) {
+            return std::nullopt;
+        }
+        for (const auto& item : *parameters_it) {
+            const auto parsed = parameter_assignment_from_json(item);
+            if (!parsed.has_value()) {
+                return std::nullopt;
+            }
+            plan.parameter_assignments.push_back(*parsed);
+        }
     }
 
     return plan;

@@ -7,7 +7,8 @@ add_library(nxd_composer STATIC
     src/plan.cpp
     src/validation.cpp
     src/manifest.cpp
-    src/descriptor_validation.cpp)
+    src/descriptor_validation.cpp
+    src/plan_emission.cpp)
 
 target_include_directories(nxd_composer PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -80,6 +81,26 @@ target_compile_options(nxd_composer_manifest_test PRIVATE
 
 add_test(NAME nxd_composer_manifest COMMAND nxd_composer_manifest_test)
 
+add_executable(nxd_composer_plan_emission_test tests/plan_emission_test.cpp)
+
+target_link_libraries(nxd_composer_plan_emission_test PRIVATE nxd_composer)
+
+target_include_directories(nxd_composer_plan_emission_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/host/include")
+
+target_compile_options(nxd_composer_plan_emission_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+
+add_test(NAME nxd_composer_plan_emission COMMAND nxd_composer_plan_emission_test)
+
+# -----------------------------------------------------------------------------
+# Descriptor validation test.
+# -----------------------------------------------------------------------------
 add_executable(nxd_composer_descriptor_validation_test tests/descriptor_validation_test.cpp)
 
 target_link_libraries(nxd_composer_descriptor_validation_test PRIVATE nxd_composer)

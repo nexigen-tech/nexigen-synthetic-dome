@@ -134,6 +134,36 @@ namespace composer = nxd::runtime::composer;
     return desc;
 }
 
+[[nodiscard]] nxd::host::ComponentDescriptor make_hardware_rt_descriptor() {
+    nxd::host::ComponentDescriptor desc{};
+    desc.name = "hardware_rt";
+    desc.version = nxd::host::Version{1, 0, 0};
+    desc.sdk = nxd::host::ComponentDescriptor::SdkVersion{1, 0};
+    desc.supported_modes = {"step"};
+    desc.resources.requires_hardware_rt = true;
+    return desc;
+}
+
+[[nodiscard]] nxd::host::ComponentDescriptor make_multi_role_descriptor() {
+    nxd::host::ComponentDescriptor desc{};
+    desc.name = "multi_role";
+    desc.version = nxd::host::Version{1, 0, 0};
+    desc.sdk = nxd::host::ComponentDescriptor::SdkVersion{1, 0};
+    desc.supported_modes = {"step"};
+
+    nxd::host::ThreadRoleDescriptor control{};
+    control.name = "control";
+    control.required = true;
+    desc.thread_roles.push_back(std::move(control));
+
+    nxd::host::ThreadRoleDescriptor io{};
+    io.name = "io";
+    io.required = false;
+    desc.thread_roles.push_back(std::move(io));
+
+    return desc;
+}
+
 [[nodiscard]] composer::SystemManifest make_valid_manifest() {
     composer::SystemManifest m{};
     m.components.push_back(composer::ComponentRef{"pid", "pid.nxdd"});
@@ -279,6 +309,79 @@ int main() {
         if (diagnostics[0].message.find("layout hash mismatch") == std::string::npos) return 81;
         if (diagnostics[0].message.find("pid_1.command") == std::string::npos) return 82;
         if (diagnostics[0].message.find("plant_1.setpoint") == std::string::npos) return 83;
+    }
+
+    // Hardware real-time requirement mismatch in non-RT mode.
+    {
+        auto hw_descriptors = descriptors;
+        hw_descriptors["hw"] = make_hardware_rt_descriptor();
+
+        auto m = make_valid_manifest();
+        m.instances.push_back(composer::Instance{
+            .id = "hw_1",
+            .component_name = "hw",
+            .partition_id = 1,
+            .parameters = {},
+            .thread_roles = {},
+        });
+        const auto diagnostics = composer::validate_against_descriptors(m, hw_descriptors);
+        if (diagnostics.size() != 1) return 90;
+        if (diagnostics[0].message.find("requires hardware real-time") == std::string::npos) {
+            return 91;
+        }
+    }
+
+    // Undeclared thread role assignment.
+    {
+        auto m = make_valid_manifest();
+        m.instances[0].thread_roles.push_back(
+            composer::ThreadRoleAssignment{"missing_role", "t0"});
+        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
+        if (diagnostics.size() != 1) return 100;
+        if (diagnostics[0].message.find("undeclared thread role") == std::string::npos) {
+            return 101;
+        }
+        if (diagnostics[0].role != "missing_role") return 102;
+    }
+
+    // Duplicate thread role assignment within the same instance.
+    {
+        auto m = make_valid_manifest();
+        m.instances[0].thread_roles.push_back(
+            composer::ThreadRoleAssignment{"control", "t1"});
+        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
+        if (diagnostics.size() != 1) return 110;
+        if (diagnostics[0].message.find("assigned more than once") == std::string::npos) {
+            return 111;
+        }
+    }
+
+    // Thread role mapped to multiple threads across instances.
+    {
+        auto mr_descriptors = descriptors;
+        mr_descriptors["mr"] = make_multi_role_descriptor();
+
+        auto m = make_valid_manifest();
+        m.instances.push_back(composer::Instance{
+            .id = "mr_1",
+            .component_name = "mr",
+            .partition_id = 1,
+            .parameters = {},
+            .thread_roles = {composer::ThreadRoleAssignment{"control", "t0"}},
+        });
+        m.instances.push_back(composer::Instance{
+            .id = "mr_2",
+            .component_name = "mr",
+            .partition_id = 2,
+            .parameters = {},
+            .thread_roles = {composer::ThreadRoleAssignment{"control", "t1"}},
+        });
+        const auto diagnostics = composer::validate_against_descriptors(m, mr_descriptors);
+        if (diagnostics.size() != 1) return 120;
+        if (diagnostics[0].message.find("assigned to both") == std::string::npos) {
+            return 121;
+        }
+        if (diagnostics[0].role != "control") return 122;
     }
 
     return 0;

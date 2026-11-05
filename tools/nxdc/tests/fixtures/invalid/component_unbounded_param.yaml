@@ -1,0 +1,17 @@
+component:
+  name: BadParam
+  version: "1.0.0"
+
+sdk:
+  abi_major: 1
+  abi_minor: 0
+
+ports: []
+parameters:
+  - name: label
+    type: string
+    required: false
+
+thread_roles: []
+resources: {}
+supported_modes: []

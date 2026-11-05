@@ -1,0 +1,19 @@
+contract:
+  name: BadRange
+  version: "1.0.0"
+
+params:
+  - name: n
+    type: u32
+    min: 1
+    max: 10
+    default: 4
+
+fields:
+  - name: value
+    type: u32[n]
+
+concrete:
+  - name: TooBig
+    params:
+      n: 100

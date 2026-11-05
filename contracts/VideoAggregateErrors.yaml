@@ -1,0 +1,36 @@
+contract:
+  name: VideoAggregateErrors
+  version: "1.0.0"
+  description: Aggregate video reception errors including missing lines and CRC status.
+
+types:
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Valid
+        value: 0
+      - name: MissingLines
+        value: 1
+      - name: CrcError
+        value: 2
+
+fields:
+  - name: stream_id
+    type: u32
+    description: Transport stream identity.
+  - name: sequence
+    type: u32
+    description: Sequence number for the report.
+  - name: missing_lines
+    type: u32
+    description: Count of missing scan lines.
+  - name: crc_errors
+    type: u32
+    description: Count of CRC errors.
+  - name: flags
+    type: u32
+    description: Error bitmask.
+  - name: status
+    type: Status
+    description: Aggregate status.

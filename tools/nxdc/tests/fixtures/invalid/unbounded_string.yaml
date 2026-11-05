@@ -1,0 +1,7 @@
+contract:
+  name: BadString
+  version: "1.0.0"
+
+fields:
+  - name: label
+    type: string

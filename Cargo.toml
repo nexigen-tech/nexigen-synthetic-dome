@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = [
+    "tools/nxdc",
+    "sdk/rust/nxd-abi",
+    "sdk/rust/nxd-sdk",
+    "examples/components/rust/counter",
+    "tests/components/rust/alloc_counter",
+    "tests/components/rust/panic_step",
+]
+
+[workspace.package]
+version = "0.1.0-alpha"
+authors = ["Nexigen team"]
+edition = "2021"
+license = "MIT"
+rust-version = "1.93.1"
+repository = "https://github.com/nexigen/nexigen-synthetic-dome"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = "thin"

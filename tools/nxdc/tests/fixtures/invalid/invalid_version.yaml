@@ -1,0 +1,7 @@
+contract:
+  name: BadVersion
+  version: "not.a.version"
+
+fields:
+  - name: value
+    type: u32

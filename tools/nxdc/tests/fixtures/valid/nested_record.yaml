@@ -1,0 +1,48 @@
+contract:
+  name: NestedRecord
+  version: "2.1.0"
+
+types:
+  - name: Quality
+    kind: enum
+    underlying: u8
+    values:
+      - name: Valid
+        value: 0
+      - name: Stale
+        value: 1
+      - name: E2EError
+        value: 2
+      - name: NotAvailable
+        value: 3
+
+  - name: Origin
+    kind: enum
+    underlying: u8
+    values:
+      - name: Model
+        value: 0
+      - name: Manual
+        value: 1
+      - name: File
+        value: 2
+      - name: Generator
+        value: 3
+      - name: Replay
+        value: 4
+
+  - name: SignalF32
+    kind: record
+    fields:
+      - name: value
+        type: f32
+      - name: quality
+        type: Quality
+      - name: origin
+        type: Origin
+
+fields:
+  - name: signal
+    type: SignalF32
+  - name: history
+    type: f32[8]

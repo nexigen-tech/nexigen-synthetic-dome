@@ -1,0 +1,17 @@
+component:
+  name: dup-port
+  version: "1.0.0"
+
+sdk:
+  abi_major: 1
+  abi_minor: 0
+
+ports:
+  - name: can
+    direction: in
+    semantics: stream
+    contract: RawCanBatch
+  - name: can
+    direction: out
+    semantics: stream
+    contract: RawCanBatch

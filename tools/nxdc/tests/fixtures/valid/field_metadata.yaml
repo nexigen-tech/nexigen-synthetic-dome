@@ -1,0 +1,12 @@
+contract:
+  name: FieldMetadata
+  version: "1.0.0"
+  description: Demonstrates cold-path field metadata.
+
+fields:
+  - name: temperature
+    type: f32
+    unit: "degC"
+    min: -40
+    max: 150
+    description: Motor temperature

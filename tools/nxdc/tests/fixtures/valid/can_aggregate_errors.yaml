@@ -1,0 +1,36 @@
+contract:
+  name: CanAggregateErrors
+  version: "1.0.0"
+  description: Aggregate CAN reception error counters and activity interval [D, H).
+
+types:
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Valid
+        value: 0
+      - name: Degraded
+        value: 1
+      - name: Invalid
+        value: 2
+
+fields:
+  - name: detection_time_ns
+    type: i64
+  - name: heartbeat_time_ns
+    type: i64
+  - name: rx_valid
+    type: u32
+  - name: rx_degraded
+    type: u32
+  - name: rx_invalid
+    type: u32
+  - name: crc_errors
+    type: u32
+  - name: self_rx_count
+    type: u32
+  - name: activity_filter
+    type: u32
+  - name: status
+    type: Status

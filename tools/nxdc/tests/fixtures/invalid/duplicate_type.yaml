@@ -1,0 +1,21 @@
+contract:
+  name: DuplicateType
+  version: "1.0.0"
+
+types:
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Ok
+        value: 0
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Bad
+        value: 1
+
+fields:
+  - name: status
+    type: Status

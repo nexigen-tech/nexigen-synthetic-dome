@@ -1,0 +1,27 @@
+component:
+  name: Empty
+  version: "1.0.0"
+  description: Minimal deterministic component with no ports and no runtime allocation.
+
+sdk:
+  abi_major: 1
+  abi_minor: 0
+
+contracts: []
+
+ports: []
+
+parameters: []
+
+thread_roles:
+  - name: main
+    required: false
+    single_cpu: false
+
+resources:
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+
+supported_modes:
+  - headless

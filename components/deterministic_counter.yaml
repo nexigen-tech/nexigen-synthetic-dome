@@ -1,0 +1,55 @@
+component:
+  name: DeterministicCounter
+  version: "1.0.0"
+  description: Counting component with one input, one output, and deterministic RNG.
+
+sdk:
+  abi_major: 1
+  abi_minor: 0
+
+contracts:
+  - name: SampleHeader
+    version: "1.0.0"
+  - name: SignalValue
+    version: "1.0.0"
+
+ports:
+  - name: trigger
+    direction: in
+    contract: SampleHeader
+    contract_version: "1.0.0"
+    semantics: event
+    required: true
+  - name: count_out
+    direction: out
+    contract: SignalValue
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+
+parameters:
+  - name: step
+    type: u32
+    default: 1
+    min: 1
+    max: 1000
+    required: false
+  - name: seed_file
+    type: u8[32]
+    file: true
+    required: false
+
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: true
+  requires_hardware_rt: false
+
+supported_modes:
+  - headless

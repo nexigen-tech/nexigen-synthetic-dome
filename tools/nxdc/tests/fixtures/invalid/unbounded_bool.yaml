@@ -1,0 +1,7 @@
+contract:
+  name: BadBool
+  version: "1.0.0"
+
+fields:
+  - name: enabled
+    type: bool

@@ -1,0 +1,17 @@
+[package]
+name = "nxd-test-panic-rust"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Rust ABI-1 test plugin that panics in step."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+nxd-abi = { path = "../../../../sdk/rust/nxd-abi" }
+nxd-sdk = { path = "../../../../sdk/rust/nxd-sdk" }
+libc = { version = "0.2", default-features = false }

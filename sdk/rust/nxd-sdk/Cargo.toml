@@ -1,0 +1,12 @@
+[package]
+name = "nxd-sdk"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NXD plugin SDK wrappers for Rust components."
+
+[dependencies]
+nxd-abi = { path = "../nxd-abi" }

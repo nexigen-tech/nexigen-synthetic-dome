@@ -1,0 +1,70 @@
+contract:
+  name: SignalValue
+  version: "1.0.0"
+  description: A single typed sample value with per-field quality and origin.
+
+params:
+  - name: T
+    kind: type
+    allowed: [f32, f64, i32, i64, u32, u64]
+    default: f32
+
+types:
+  - name: Quality
+    kind: enum
+    underlying: u8
+    values:
+      - name: Valid
+        value: 0
+      - name: Stale
+        value: 1
+      - name: E2EError
+        value: 2
+      - name: NotAvailable
+        value: 3
+
+  - name: Origin
+    kind: enum
+    underlying: u8
+    values:
+      - name: Model
+        value: 0
+      - name: Manual
+        value: 1
+      - name: File
+        value: 2
+      - name: Generator
+        value: 3
+      - name: Replay
+        value: 4
+
+fields:
+  - name: value
+    type: T
+    description: Typed sample value.
+  - name: quality
+    type: Quality
+    description: Quality indicator for the sample value.
+  - name: origin
+    type: Origin
+    description: Origin indicator for the sample value.
+
+concrete:
+  - name: SignalValueF32
+    params:
+      T: f32
+  - name: SignalValueF64
+    params:
+      T: f64
+  - name: SignalValueI32
+    params:
+      T: i32
+  - name: SignalValueI64
+    params:
+      T: i64
+  - name: SignalValueU32
+    params:
+      T: u32
+  - name: SignalValueU64
+    params:
+      T: u64

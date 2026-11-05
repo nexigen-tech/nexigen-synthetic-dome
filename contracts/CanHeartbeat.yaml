@@ -1,0 +1,47 @@
+contract:
+  name: CanHeartbeat
+  version: "1.0.0"
+  description: Periodic CAN heartbeat carrying direction, protocol kind, and hardware timestamp.
+
+types:
+  - name: Direction
+    kind: enum
+    underlying: u8
+    values:
+      - name: Rx
+        value: 0
+      - name: SelfRx
+        value: 1
+
+  - name: Kind
+    kind: enum
+    underlying: u8
+    values:
+      - name: Data
+        value: 0
+      - name: Remote
+        value: 1
+      - name: Error
+        value: 2
+      - name: Heartbeat
+        value: 3
+
+fields:
+  - name: hw_time_ns
+    type: i64
+    description: Hardware timestamp in nanoseconds.
+  - name: can_id
+    type: u32
+    description: CAN identifier.
+  - name: direction
+    type: Direction
+    description: Reception direction; SelfRx marks loopback frames.
+  - name: kind
+    type: Kind
+    description: Protocol kind; always Heartbeat for this contract.
+  - name: heartbeat_counter
+    type: u32
+    description: Monotonic heartbeat counter.
+  - name: status
+    type: u8
+    description: Status flags.

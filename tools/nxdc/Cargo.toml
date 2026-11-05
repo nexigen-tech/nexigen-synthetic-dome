@@ -1,0 +1,22 @@
+[package]
+name = "nxdc"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Nexigen schema compiler: canonical contract/component IDL to C++23 and Rust bindings"
+
+[dependencies]
+yaml-rust2 = "0.10"
+serde_json = "1.0"
+sha2 = "0.10"
+
+[lib]
+name = "nxdc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "nxdc"
+path = "src/main.rs"

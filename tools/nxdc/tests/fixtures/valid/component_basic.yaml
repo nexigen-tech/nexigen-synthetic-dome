@@ -1,0 +1,53 @@
+component:
+  name: can-gateway
+  version: "1.2.3"
+
+sdk:
+  abi_major: 1
+  abi_minor: 0
+
+contracts:
+  - name: RawCanBatch
+    version: "1.0.0"
+    hash: "0000000000000000000000000000000000000000000000000000000000000000"
+
+ports:
+  - name: can_in
+    direction: in
+    semantics: stream
+    contract: RawCanBatch
+    contract_version: "1.0.0"
+    required: true
+  - name: can_out
+    direction: out
+    semantics: stream
+    contract: RawCanBatch
+    contract_version: "1.0.0"
+    required: true
+
+parameters:
+  - name: bitrate
+    type: u32
+    default: "500000"
+    min: 10000
+    max: 1000000
+    required: true
+
+thread_roles:
+  - name: rx
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+  - name: tx
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+
+resources:
+  max_heap_bytes: 1048576
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: true
+
+supported_modes:
+  - real_time

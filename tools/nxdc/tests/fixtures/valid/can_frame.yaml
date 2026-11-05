@@ -1,0 +1,60 @@
+contract:
+  name: RawCanFrame
+  version: "1.0.0"
+  description: Bounded Classical/FD/XL CAN frame storage template.
+
+types:
+  - name: Direction
+    kind: enum
+    underlying: u8
+    values:
+      - name: Rx
+        value: 0
+      - name: SelfRx
+        value: 1
+
+  - name: Kind
+    kind: enum
+    underlying: u8
+    values:
+      - name: Data
+        value: 0
+      - name: Remote
+        value: 1
+      - name: Error
+        value: 2
+      - name: Heartbeat
+        value: 3
+
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Valid
+        value: 0
+      - name: Degraded
+        value: 1
+      - name: Invalid
+        value: 2
+
+fields:
+  - name: hw_time_ns
+    type: i64
+  - name: can_id
+    type: u32
+  - name: direction
+    type: Direction
+  - name: kind
+    type: Kind
+  - name: status
+    type: Status
+  - name: raw_dlc
+    type: u8
+  - name: payload_length
+    type: u8
+  - name: payload
+    type: u8[64]
+  - name: error_flags
+    type: u16
+  - name: vendor_error
+    type: u32

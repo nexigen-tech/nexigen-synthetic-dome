@@ -1,0 +1,56 @@
+contract:
+  name: VideoFrame
+  version: "1.0.0"
+  description: Bounded video frame with codec identification, rational FPS, plane metadata, and extension identifiers.
+
+types:
+  - name: Codec
+    kind: enum
+    underlying: u8
+    values:
+      - name: Raw
+        value: 0
+      - name: Jpeg
+        value: 1
+      - name: H264
+        value: 2
+      - name: H265
+        value: 3
+      - name: Av1
+        value: 4
+      - name: H266
+        value: 5
+      - name: DeviceRaw
+        value: 6
+      - name: Unknown
+        value: 255
+
+fields:
+  - name: stream_id
+    type: u32
+  - name: transport_sequence
+    type: u32
+  - name: content_sequence
+    type: u32
+  - name: width
+    type: u32
+  - name: height
+    type: u32
+  - name: fps_num
+    type: u32
+  - name: fps_den
+    type: u32
+  - name: codec
+    type: Codec
+  - name: extension_id
+    type: u32
+  - name: plane_offsets
+    type: u32[3]
+  - name: plane_strides
+    type: u32[3]
+  - name: payload_length
+    type: u32
+  - name: payload
+    type: u8[2048]
+  - name: flags
+    type: u32

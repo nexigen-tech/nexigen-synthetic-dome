@@ -1,0 +1,14 @@
+component:
+  name: BadAbi
+  version: "1.0.0"
+
+sdk:
+  abi_major: 0
+  abi_minor: 0
+
+contracts: []
+ports: []
+parameters: []
+thread_roles: []
+resources: {}
+supported_modes: []

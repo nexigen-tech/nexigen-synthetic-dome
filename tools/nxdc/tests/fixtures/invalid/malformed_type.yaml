@@ -1,0 +1,7 @@
+contract:
+  name: BadType
+  version: "1.0.0"
+
+fields:
+  - name: value
+    type: f128

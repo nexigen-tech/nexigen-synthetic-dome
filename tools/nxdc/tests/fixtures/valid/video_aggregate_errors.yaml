@@ -1,0 +1,30 @@
+contract:
+  name: VideoAggregateErrors
+  version: "1.0.0"
+  description: Aggregate video reception errors including missing lines and CRC status.
+
+types:
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Valid
+        value: 0
+      - name: MissingLines
+        value: 1
+      - name: CrcError
+        value: 2
+
+fields:
+  - name: stream_id
+    type: u32
+  - name: sequence
+    type: u32
+  - name: missing_lines
+    type: u32
+  - name: crc_errors
+    type: u32
+  - name: flags
+    type: u32
+  - name: status
+    type: Status

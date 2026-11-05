@@ -1,0 +1,33 @@
+contract:
+  name: VideoHeartbeat
+  version: "1.0.0"
+  description: Video stream heartbeat with no payload and independent transport/content sequences.
+
+types:
+  - name: Status
+    kind: enum
+    underlying: u8
+    values:
+      - name: Active
+        value: 0
+      - name: Stale
+        value: 1
+      - name: Lost
+        value: 2
+
+fields:
+  - name: stream_id
+    type: u32
+    description: Transport stream identity.
+  - name: transport_sequence
+    type: u32
+    description: Independent transport sequence.
+  - name: content_sequence
+    type: u32
+    description: Independent content sequence.
+  - name: timestamp_ns
+    type: i64
+    description: Hardware timestamp in nanoseconds.
+  - name: status
+    type: Status
+    description: Stream status.

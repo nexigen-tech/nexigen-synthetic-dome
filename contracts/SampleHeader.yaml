@@ -1,0 +1,24 @@
+contract:
+  name: SampleHeader
+  version: "1.0.0"
+  description: Common sample metadata for every transported sample.
+
+fields:
+  - name: frame_no
+    type: u64
+    description: Logical frame number.
+  - name: sim_time_ns
+    type: i64
+    description: Simulation time in nanoseconds.
+  - name: hw_time_ns
+    type: i64
+    description: Hardware formation time in nanoseconds.
+  - name: source_id
+    type: u32
+    description: Numeric source identity.
+  - name: sequence
+    type: u32
+    description: Transport sequence number.
+  - name: flags
+    type: u32
+    description: Sample flags.

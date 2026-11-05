@@ -1,0 +1,7 @@
+contract:
+  name: UnknownType
+  version: "1.0.0"
+
+fields:
+  - name: value
+    type: NonExistent

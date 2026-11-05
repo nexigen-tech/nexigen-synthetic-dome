@@ -1,0 +1,13 @@
+[package]
+name = "nxd-abi"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NXD plugin ABI-1 C types and layout assertions."
+
+[dependencies]
+
+[dev-dependencies]

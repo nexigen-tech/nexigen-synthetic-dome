@@ -1,0 +1,7 @@
+contract:
+  name: BadArray
+  version: "1.0.0"
+
+fields:
+  - name: values
+    type: u32[zero]

@@ -1,0 +1,25 @@
+contract:
+  name: BadCanPayload
+  version: "1.0.0"
+
+params:
+  - name: max_payload_bytes
+    type: u32
+    min: 8
+    max: 2048
+    default: 64
+  - name: batch_capacity
+    type: u32
+    min: 1
+    max: 256
+    default: 32
+
+fields:
+  - name: frames
+    type: u8[max_payload_bytes]
+
+concrete:
+  - name: BadCan
+    params:
+      max_payload_bytes: 4096
+      batch_capacity: 1

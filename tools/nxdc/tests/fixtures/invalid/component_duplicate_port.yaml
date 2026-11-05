@@ -1,0 +1,28 @@
+component:
+  name: DupPort
+  version: "1.0.0"
+
+sdk:
+  abi_major: 1
+  abi_minor: 0
+
+contracts:
+  - name: SampleHeader
+    version: "1.0.0"
+
+ports:
+  - name: same
+    direction: in
+    contract: SampleHeader
+    contract_version: "1.0.0"
+    semantics: signal
+  - name: same
+    direction: out
+    contract: SampleHeader
+    contract_version: "1.0.0"
+    semantics: signal
+
+parameters: []
+thread_roles: []
+resources: {}
+supported_modes: []

@@ -288,7 +288,7 @@ target_compile_options(nxd_abi_layout_test PRIVATE
 add_test(NAME nxd_abi_layout COMMAND nxd_abi_layout_test)
 
 add_executable(nxd_abi_plugin_equivalence_test tests/abi_plugin_equivalence.cpp)
-add_dependencies(nxd_abi_plugin_equivalence_test nxd_abi_header nxd_example_counter_cpp)
+add_dependencies(nxd_abi_plugin_equivalence_test nxd_abi_header nxd_example_counter_cpp nxd_example_counter_rust)
 target_include_directories(nxd_abi_plugin_equivalence_test PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi")
@@ -703,6 +703,7 @@ target_compile_options(nxd_host_port_io_golden_test PRIVATE
     -Wall
     -Wextra
     -Werror)
+add_dependencies(nxd_host_port_io_golden_test nxd_test_port_io_cpp nxd_test_port_io_rust)
 add_test(NAME nxd_host_port_io_golden
     COMMAND nxd_host_port_io_golden_test
             "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/cpp/port_io/descriptor.json"

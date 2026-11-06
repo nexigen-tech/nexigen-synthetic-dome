@@ -64,6 +64,23 @@ jobs:
           mkdir -p ../nexigen-ecosystem
           git clone --depth 1 https://github.com/nexigen-tech/nexigen-cpp.git ../nexigen-ecosystem/nexigen-cpp
 
+      - name: Patch missing nexigen-cpp cmake config template
+        run: |
+          # TODO: remove this step once nexigen-cpp commits cmake/nexigenConfig.cmake.in
+          # instead of ignoring *.cmake.in in its .gitignore.
+          cat > ../nexigen-ecosystem/nexigen-cpp/cmake/nexigenConfig.cmake.in <<'EOF'
+          @PACKAGE_INIT@
+
+          # nexigen-cpp package configuration.
+          include(CMakeFindDependencyMacro)
+          find_dependency(Threads)
+          find_dependency(nlohmann_json)
+          include("${CMAKE_CURRENT_LIST_DIR}/nexigenTargets.cmake")
+          set_property(TARGET nexigen::core APPEND PROPERTY
+              INTERFACE_LINK_LIBRARIES nlohmann_json::nlohmann_json)
+          check_required_components(nexigen)
+          EOF
+
       - name: Install system dependencies
         run: |
           sudo apt-get update

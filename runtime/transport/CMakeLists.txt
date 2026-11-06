@@ -3,8 +3,11 @@ add_library(nxd_transport STATIC
     src/iceoryx_transport.cpp
 )
 
+add_dependencies(nxd_transport nxd_generated_headers)
+
 target_include_directories(nxd_transport PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${NXD_GENERATED_CPP_DIR}"
 )
 
 target_link_libraries(nxd_transport PUBLIC iceoryx2-c::static-lib)

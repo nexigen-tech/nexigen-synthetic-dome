@@ -240,6 +240,7 @@ pub struct Port {
     pub semantics: PortSemantics,
     pub contract_name: String,
     pub contract_version: Version,
+    pub layout_hash: Option<String>,
     pub binding_required: bool,
 }
 

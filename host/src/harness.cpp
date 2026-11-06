@@ -90,11 +90,17 @@ namespace nxd::host {
             return std::unexpected(nexigen::core::ErrorCode::NotInitialized);
         }
         HeadlessDriver driver(*component_);
-        last_result_ = driver.run(frame_count, seed_, sim_time_step_ns, hw_time_step_ns);
+        last_result_ =
+            driver.run(frame_count, seed_, sim_time_step_ns, hw_time_step_ns, frames_run_);
         if (!last_result_.stopped_normally) {
             return std::unexpected(nexigen::core::ErrorCode::SystemError);
         }
+        frames_run_ += frame_count;
         return {};
+    }
+
+    std::uint64_t HeadlessHarness::frames_run() const noexcept {
+        return frames_run_;
     }
 
     const LoadedPlugin* HeadlessHarness::plugin() const noexcept {

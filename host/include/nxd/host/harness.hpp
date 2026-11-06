@@ -44,6 +44,10 @@ namespace nxd::host {
                                                 std::uint64_t sim_time_step_ns = 1'000'000,
                                                 std::uint64_t hw_time_step_ns = 1'000) noexcept;
 
+        /// Total number of frames simulated by this harness across all `run()`
+        /// calls.  This lets callers advance simulation time incrementally.
+        [[nodiscard]] std::uint64_t frames_run() const noexcept;
+
         [[nodiscard]] const LoadedPlugin* plugin() const noexcept;
         [[nodiscard]] ComponentInstance* component() noexcept;
         [[nodiscard]] const DriverResult& last_result() const noexcept;
@@ -76,6 +80,7 @@ namespace nxd::host {
         DriverResult last_result_{};
         std::vector<ThreadRoleReport> thread_reports_{};
         std::uint64_t seed_ = 0;
+        std::uint64_t frames_run_ = 0;
     };
 
 } // namespace nxd::host

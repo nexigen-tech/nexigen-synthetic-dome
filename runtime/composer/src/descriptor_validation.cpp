@@ -171,8 +171,24 @@ void validate_instance(const SystemManifest& manifest,
                        const Instance& instance,
                        const nxd::host::ComponentDescriptor& descriptor,
                        std::vector<ValidationDiagnostic>& diagnostics) noexcept {
-    // Required ports.
+    // Required ports and port contract metadata.
     for (const auto& port : descriptor.ports) {
+        if (port.contract_name.empty()) {
+            diagnostics.push_back(make_diagnostic(
+                std::format(
+                    "instance '{}' of component '{}' port '{}' has no contract name",
+                    instance.id, descriptor.name, port.name),
+                std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name,
+                port.contract_name));
+        }
+        if (!port.layout_hash.has_value()) {
+            diagnostics.push_back(make_diagnostic(
+                std::format(
+                    "instance '{}' of component '{}' port '{}' missing contract layout_hash",
+                    instance.id, descriptor.name, port.name),
+                std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name,
+                port.contract_name));
+        }
         if (!port.required) {
             continue;
         }

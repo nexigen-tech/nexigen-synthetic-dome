@@ -33,7 +33,6 @@ int main() {
     transport::SampleMetadata meta{};
     meta.frame_no = 7;
     meta.sim_time_ns = 1000;
-    std::memcpy(meta.layout_hash.data(), hash.data(), hash.size());
     pub->publish(meta);
 
     auto view_a = sub_a->take();

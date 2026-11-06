@@ -27,7 +27,6 @@ class HeadlessPublisher final : public Publisher {
         loan.data = channel_->buffer.data();
         loan.element_size = channel_->element_size;
         loan.count = channel_->max_count;
-        loan.metadata.layout_hash = channel_->layout_hash;
         return loan;
     }
 

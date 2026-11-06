@@ -19,6 +19,10 @@ The hot-path generated types contain no parser, formatter, allocator, or
 locking.  All layout decisions are made by `nxdc` on the cold path and encoded
 in the canonical document.
 
+Skeleton contracts include `SampleHeader` (common per-sample metadata),
+`SignalValue<T>` (typed scalar with quality and origin), `RawCanFrame`,
+`RawCanBatch`, `VideoFrame`, and their heartbeat/error aggregates.
+
 ## IDL vocabulary
 
 A contract file is a single YAML document with a top-level `contract` mapping,
@@ -448,8 +452,10 @@ Every construct and example in this document is exercised by an existing test:
 
 | Document section          | Fixture / test file                                    |
 |---------------------------|--------------------------------------------------------|
-| Contract header           | `valid/sample_header.yaml`                             |
-| Primitives                | `valid/sample_header.yaml`                             |
+| Contract header           | `valid/sample_header.yaml`, `contracts/SampleHeader.yaml` |
+| Primitives                | `valid/sample_header.yaml`, `contracts/SampleHeader.yaml` |
+| SignalValue scalar sample | `contracts/SignalValue.yaml`, `tools/nxdc/tests/golden.rs` |
+| Sample metadata header    | `contracts/SampleHeader.yaml`, `tools/nxdc/tests/golden.rs` |
 | Fixed arrays              | `valid/nested_record.yaml`                             |
 | Records                   | `valid/nested_record.yaml`                             |
 | Enums                     | `valid/can_frame.yaml`                                 |

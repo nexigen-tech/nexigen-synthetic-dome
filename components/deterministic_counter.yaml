@@ -10,7 +10,7 @@ sdk:
 contracts:
   - name: SampleHeader
     version: "1.0.0"
-  - name: SignalValue
+  - name: SignalValueU64
     version: "1.0.0"
 
 ports:
@@ -22,7 +22,7 @@ ports:
     required: true
   - name: count_out
     direction: out
-    contract: SignalValue
+    contract: SignalValueU64
     contract_version: "1.0.0"
     semantics: signal
     required: true

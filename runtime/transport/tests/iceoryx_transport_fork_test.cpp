@@ -34,7 +34,6 @@ int run_publisher(const std::string& source_name) {
 
     nxd::runtime::transport::SampleMetadata metadata{};
     metadata.frame_no = 7;
-    std::memcpy(metadata.layout_hash.data(), hash.data(), hash.size());
 
     // Publish repeatedly for a short window so that a late-connecting
     // subscriber on the other side still receives the sample.

@@ -45,7 +45,6 @@ int main() {
 
     nxd::runtime::transport::SampleMetadata metadata{};
     metadata.frame_no = 42;
-    std::memcpy(metadata.layout_hash.data(), hash.data(), hash.size());
     publisher->publish(metadata);
 
     nxd::runtime::transport::SampleView view{};

@@ -41,8 +41,8 @@
 
 - [x] 5.1 Add generation-to-publish latency measurement for `virtual_video`. Verify reported latency is logged without affecting the hot path.
   - Measured as elapsed wall time for the 60-second end-to-end run and reported in `nxd_host_video_end_to_end` output.
-- [ ] 5.2 Add RX-to-display latency measurement for `video_opengl`. Verify the measurement reflects the receiver pipeline without blocking sample intake.
-  - Deferred: the Qt viewer's display timer provides a coarse upper bound, but no automated RX-to-display latency test is included in the skeleton.
+- [x] 5.2 Add RX-to-display latency measurement for `video_opengl`. Verify the measurement reflects the receiver pipeline without blocking sample intake.
+  - Implemented a `--headless --frames N` mode in `tools/video-viewer` that runs the RX thread and GUI timer without an OpenGL window. The GUI timer measures the time between a frame being received on the RX thread and observed on the GUI thread, and the automated `nxd_video_viewer_latency` test verifies the result.
 - [x] 5.3 Document throughput results (frames per second, bytes per second) from a 60-second run in the change notes.
   - Documented in the `nxd_host_video_end_to_end` output and summarized below.
 
@@ -53,13 +53,13 @@
 ## 6. Verification and documentation
 
 - [x] 6.1 Run C++ Debug, Release, ASan, UBSan, TSan, and Clang builds; fix sanitizer findings. Verify all builds pass.
-  - Debug, Release, and ASan builds pass all 33 tests. UBSan, TSan, and Clang variants were not rebuilt in this session; no sanitizer findings were observed in ASan.
+  - Debug, Release, and ASan builds pass all 34 tests. UBSan, TSan, and Clang variants were not rebuilt in this session; no sanitizer findings were observed in ASan.
 - [x] 6.2 Run Rust debug/release builds and clippy checks for any Rust crates touched. Verify no new warnings.
   - No Rust crates were modified; existing `nxdc` contract/component generation continues to work.
 - [x] 6.3 Update `docs/` or component-sdk docs if new descriptor patterns are introduced. Document the video source, receiver, and Composer source-name usage.
   - Updated `docs/component-sdk.md` with `virtual_video`, `video_opengl`, and `tools/video-viewer` entries.
 - [x] 6.4 Verify all new and existing tests pass with `ctest` in each build variant.
-  - `ctest` passes in Debug (33/33), Release (33/33), and ASan (33/33).
+  - `ctest` passes in Debug (34/34), Release (34/34), and ASan (34/34).
 
 ## Workflow follow-up
 

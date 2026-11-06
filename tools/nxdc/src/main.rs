@@ -131,14 +131,70 @@ fn canonicalize(path: &Path, output: Option<PathBuf>) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// Finds the project `contracts/` directory by walking up from `component_path`
+/// and looking for a directory named `contracts`.
+fn find_contracts_dir(component_path: &Path) -> Option<PathBuf> {
+    let mut dir = component_path.parent()?;
+    loop {
+        let candidate = dir.join("contracts");
+        if candidate.is_dir() {
+            return Some(candidate);
+        }
+        dir = dir.parent()?;
+    }
+}
+
+/// Loads every contract YAML in `contracts_dir`, computes the SHA-256 layout
+/// hash for each concrete contract, and fills in missing `layout_hash` values
+/// on `descriptor.ports` by looking up the port's `contract_name`.
+fn fill_port_layout_hashes(descriptor: &mut nxdc::model::ComponentDescriptor, component_path: &Path) {
+    let contracts_dir = match find_contracts_dir(component_path) {
+        Some(d) => d,
+        None => return,
+    };
+
+    let mut hashes: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let entries = match fs::read_dir(&contracts_dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("yaml") {
+            continue;
+        }
+        let schemas = match nxdc::load_concrete_contracts(&path) {
+            Ok(s) => s,
+            Err(_) => continue,
+        };
+        for schema in schemas {
+            if let Ok((_, hash)) = nxdc::canonical::emit(&schema) {
+                let hash_hex = hash.iter().map(|b| format!("{b:02x}")).collect::<String>();
+                hashes.insert(schema.name.clone(), hash_hex);
+            }
+        }
+    }
+
+    for port in &mut descriptor.ports {
+        if port.layout_hash.is_none() {
+            if let Some(hash) = hashes.get(&port.contract_name) {
+                port.layout_hash = Some(hash.clone());
+            }
+        }
+    }
+}
+
 fn emit_component_descriptor(path: &Path, output: Option<PathBuf>) -> ExitCode {
-    let descriptor = match nxdc::load_component(path) {
+    let mut descriptor = match nxdc::load_component(path) {
         Ok(d) => d,
         Err(diag) => {
             eprintln!("{diag}");
             return ExitCode::FAILURE;
         }
     };
+
+    fill_port_layout_hashes(&mut descriptor, path);
 
     let (json, hash) = match nxdc::canonical::emit_component(&descriptor) {
         Ok(r) => r,

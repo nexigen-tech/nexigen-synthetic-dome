@@ -93,7 +93,7 @@ class IceoryxPublisher final : public Publisher {
         void* header = nullptr;
         iox2_sample_mut_user_header_mut(&loaned_sample_, &header);
         if (header != nullptr) {
-            std::memcpy(header, &metadata, sizeof(SampleMetadata));
+            std::memcpy(header, &metadata, sizeof(nxd::contracts::SampleHeader));
         }
 
         iox2_sample_mut_send(loaned_sample_, nullptr);
@@ -142,7 +142,7 @@ class IceoryxSubscriber final : public Subscriber {
         const void* header = nullptr;
         iox2_sample_user_header(&sample, &header);
         if (header != nullptr) {
-            std::memcpy(&last_metadata_, header, sizeof(SampleMetadata));
+            std::memcpy(&last_metadata_, header, sizeof(nxd::contracts::SampleHeader));
         } else {
             last_metadata_ = SampleMetadata{};
         }
@@ -244,13 +244,13 @@ Publisher* IceoryxTransport::create_publisher(std::string_view source_name,
         return nullptr;
     }
 
-    constexpr const char* header_name = "NxdSampleMetadata";
+    constexpr const char* header_name = "NxdSampleHeader";
     if (iox2_service_builder_pub_sub_set_user_header_type_details(&ps_builder,
                                                                   iox2_type_variant_e_FIXED_SIZE,
                                                                   header_name,
                                                                   std::strlen(header_name),
-                                                                  sizeof(SampleMetadata),
-                                                                  alignof(SampleMetadata))
+                                                                  sizeof(nxd::contracts::SampleHeader),
+                                                                  alignof(nxd::contracts::SampleHeader))
         != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
@@ -320,13 +320,13 @@ Subscriber* IceoryxTransport::create_subscriber(std::string_view source_name,
         return nullptr;
     }
 
-    constexpr const char* header_name = "NxdSampleMetadata";
+    constexpr const char* header_name = "NxdSampleHeader";
     if (iox2_service_builder_pub_sub_set_user_header_type_details(&ps_builder,
                                                                   iox2_type_variant_e_FIXED_SIZE,
                                                                   header_name,
                                                                   std::strlen(header_name),
-                                                                  sizeof(SampleMetadata),
-                                                                  alignof(SampleMetadata))
+                                                                  sizeof(nxd::contracts::SampleHeader),
+                                                                  alignof(nxd::contracts::SampleHeader))
         != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;

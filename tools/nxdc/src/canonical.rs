@@ -461,6 +461,9 @@ fn port_value(port: &Port) -> Value {
         "contract_version".to_owned(),
         version_value(port.contract_version),
     );
+    if let Some(hash) = &port.layout_hash {
+        obj.insert("layout_hash".to_owned(), Value::String(hash.clone()));
+    }
     obj.insert("required".to_owned(), Value::Bool(port.binding_required));
     Value::Object(obj)
 }

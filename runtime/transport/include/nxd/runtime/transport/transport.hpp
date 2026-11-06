@@ -1,5 +1,7 @@
 #pragma once
 
+#include "nxd/contracts/SampleHeader.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -7,17 +9,20 @@
 #include <optional>
 #include <span>
 #include <string_view>
+#include <type_traits>
 
 namespace nxd::runtime::transport {
 
 /// Metadata carried with every transported sample.
-struct SampleMetadata {
-    std::uint64_t frame_no = 0;
-    std::int64_t sim_time_ns = 0;
-    std::int64_t read_time_ns = 0;
-    std::int64_t write_deadline_ns = 0;
-    std::array<std::uint8_t, 32> layout_hash{};
-};
+/// The transport user header is exactly the generated `SampleHeader` contract.
+using SampleMetadata = nxd::contracts::SampleHeader;
+
+static_assert(sizeof(SampleMetadata) == sizeof(nxd::contracts::SampleHeader),
+              "transport metadata must match SampleHeader layout");
+static_assert(alignof(SampleMetadata) == alignof(nxd::contracts::SampleHeader),
+              "transport metadata must match SampleHeader alignment");
+static_assert(std::is_trivially_copyable_v<SampleMetadata>,
+              "transport metadata must be trivially copyable");
 
 /// Borrowed view of a received sample.
 struct SampleView {

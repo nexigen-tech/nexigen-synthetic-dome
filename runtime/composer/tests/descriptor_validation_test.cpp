@@ -22,14 +22,16 @@ namespace composer = nxd::runtime::composer;
     desc.sdk = nxd::host::ComponentDescriptor::SdkVersion{1, 0};
     desc.supported_modes = {"step", "scaled_sil"};
 
-    nxd::host::ContractRef setpoint_contract{};
-    setpoint_contract.name = "Setpoint";
-    setpoint_contract.version = nxd::host::Version{1, 0, 0};
-    setpoint_contract.hash = std::array<std::uint8_t, 32>{
+    constexpr std::array<std::uint8_t, 32> setpoint_hash{
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
         0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
         0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
         0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20};
+
+    nxd::host::ContractRef setpoint_contract{};
+    setpoint_contract.name = "Setpoint";
+    setpoint_contract.version = nxd::host::Version{1, 0, 0};
+    setpoint_contract.hash = setpoint_hash;
     desc.contracts.push_back(std::move(setpoint_contract));
 
     nxd::host::PortDescriptor command{};
@@ -38,6 +40,7 @@ namespace composer = nxd::runtime::composer;
     command.semantics = "Signal";
     command.contract_name = "Setpoint";
     command.contract_version = nxd::host::Version{1, 0, 0};
+    command.layout_hash = setpoint_hash;
     command.required = true;
     desc.ports.push_back(std::move(command));
 
@@ -64,14 +67,16 @@ namespace composer = nxd::runtime::composer;
     desc.sdk = nxd::host::ComponentDescriptor::SdkVersion{1, 0};
     desc.supported_modes = {"step", "realtime_hil"};
 
-    nxd::host::ContractRef setpoint_contract{};
-    setpoint_contract.name = "Setpoint";
-    setpoint_contract.version = nxd::host::Version{1, 0, 0};
-    setpoint_contract.hash = std::array<std::uint8_t, 32>{
+    constexpr std::array<std::uint8_t, 32> setpoint_hash{
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
         0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
         0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
         0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20};
+
+    nxd::host::ContractRef setpoint_contract{};
+    setpoint_contract.name = "Setpoint";
+    setpoint_contract.version = nxd::host::Version{1, 0, 0};
+    setpoint_contract.hash = setpoint_hash;
     desc.contracts.push_back(std::move(setpoint_contract));
 
     nxd::host::PortDescriptor setpoint{};
@@ -80,6 +85,7 @@ namespace composer = nxd::runtime::composer;
     setpoint.semantics = "Signal";
     setpoint.contract_name = "Setpoint";
     setpoint.contract_version = nxd::host::Version{1, 0, 0};
+    setpoint.layout_hash = setpoint_hash;
     setpoint.required = true;
     desc.ports.push_back(std::move(setpoint));
 
@@ -99,6 +105,7 @@ namespace composer = nxd::runtime::composer;
     setpoint.semantics = "Signal";
     setpoint.contract_name = "Mismatch";
     setpoint.contract_version = nxd::host::Version{2, 0, 0};
+    setpoint.layout_hash = std::array<std::uint8_t, 32>{};
     setpoint.required = true;
     desc.ports.push_back(std::move(setpoint));
 
@@ -112,15 +119,37 @@ namespace composer = nxd::runtime::composer;
     desc.sdk = nxd::host::ComponentDescriptor::SdkVersion{1, 0};
     desc.supported_modes = {"step"};
 
-    nxd::host::ContractRef setpoint_contract{};
-    setpoint_contract.name = "Setpoint";
-    setpoint_contract.version = nxd::host::Version{1, 0, 0};
-    setpoint_contract.hash = std::array<std::uint8_t, 32>{
+    constexpr std::array<std::uint8_t, 32> bad_hash{
         0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8,
         0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
         0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8,
         0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0};
+
+    nxd::host::ContractRef setpoint_contract{};
+    setpoint_contract.name = "Setpoint";
+    setpoint_contract.version = nxd::host::Version{1, 0, 0};
+    setpoint_contract.hash = bad_hash;
     desc.contracts.push_back(std::move(setpoint_contract));
+
+    nxd::host::PortDescriptor setpoint{};
+    setpoint.name = "setpoint";
+    setpoint.direction = nxd::host::PortDescriptor::Direction::In;
+    setpoint.semantics = "Signal";
+    setpoint.contract_name = "Setpoint";
+    setpoint.contract_version = nxd::host::Version{1, 0, 0};
+    setpoint.layout_hash = bad_hash;
+    setpoint.required = true;
+    desc.ports.push_back(std::move(setpoint));
+
+    return desc;
+}
+
+[[nodiscard]] nxd::host::ComponentDescriptor make_missing_hash_plant() {
+    nxd::host::ComponentDescriptor desc{};
+    desc.name = "plant_missing_hash";
+    desc.version = nxd::host::Version{1, 0, 0};
+    desc.sdk = nxd::host::ComponentDescriptor::SdkVersion{1, 0};
+    desc.supported_modes = {"step"};
 
     nxd::host::PortDescriptor setpoint{};
     setpoint.name = "setpoint";
@@ -309,6 +338,20 @@ int main() {
         if (diagnostics[0].message.find("layout hash mismatch") == std::string::npos) return 81;
         if (diagnostics[0].message.find("pid_1.command") == std::string::npos) return 82;
         if (diagnostics[0].message.find("plant_1.setpoint") == std::string::npos) return 83;
+    }
+
+    // Missing port layout hash.
+    {
+        auto bad_descriptors = descriptors;
+        bad_descriptors["missing_hash_plant"] = make_missing_hash_plant();
+
+        auto m = make_valid_manifest();
+        m.instances[1].component_name = "missing_hash_plant";
+        const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
+        if (diagnostics.size() != 1) return 85;
+        if (diagnostics[0].message.find("missing contract layout_hash") == std::string::npos) {
+            return 86;
+        }
     }
 
     // Hardware real-time requirement mismatch in non-RT mode.

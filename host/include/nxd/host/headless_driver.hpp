@@ -25,7 +25,8 @@ namespace nxd::host {
 
         [[nodiscard]] DriverResult run(std::uint64_t frame_count, std::uint64_t seed,
                                        std::uint64_t sim_time_step_ns,
-                                       std::uint64_t hw_time_step_ns) noexcept;
+                                       std::uint64_t hw_time_step_ns,
+                                       std::uint64_t start_frame = 0) noexcept;
 
       private:
         ComponentInstance* component_;

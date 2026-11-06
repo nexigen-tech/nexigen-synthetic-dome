@@ -212,12 +212,14 @@ namespace nxd::host {
                     !parse_version_json(*contract_version, port.contract_version)) {
                     return false;
                 }
+                const auto layout_hash = item.find("layout_hash");
                 const auto contract_hash = item.find("contract_hash");
-                if (contract_hash != item.end()) {
-                    if (!contract_hash->is_string()) {
+                if (layout_hash != item.end() || contract_hash != item.end()) {
+                    const auto& hash_field = (layout_hash != item.end()) ? layout_hash : contract_hash;
+                    if (!hash_field->is_string()) {
                         return false;
                     }
-                    const auto parsed = parse_hex_hash(contract_hash->get<std::string>());
+                    const auto parsed = parse_hex_hash(hash_field->get<std::string>());
                     if (!parsed) {
                         return false;
                     }

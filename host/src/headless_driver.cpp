@@ -19,7 +19,8 @@ namespace nxd::host {
 
     DriverResult HeadlessDriver::run(std::uint64_t frame_count, std::uint64_t seed,
                                      std::uint64_t sim_time_step_ns,
-                                     std::uint64_t hw_time_step_ns) noexcept {
+                                     std::uint64_t hw_time_step_ns,
+                                     std::uint64_t start_frame) noexcept {
         DriverResult result{};
         if (!component_->armed()) {
             result.last_status = NXD_ERROR_NOT_INITIALIZED;
@@ -28,10 +29,11 @@ namespace nxd::host {
 
         std::uint64_t seed_state = seed;
         for (std::uint64_t frame = 0; frame < frame_count; ++frame) {
+            const std::uint64_t absolute_frame = start_frame + frame;
             NxdFrameContext ctx{};
-            ctx.frame_no = frame;
-            ctx.sim_time_ns = static_cast<std::int64_t>(frame * sim_time_step_ns);
-            ctx.hw_time_ns = static_cast<std::int64_t>(frame * hw_time_step_ns);
+            ctx.frame_no = absolute_frame;
+            ctx.sim_time_ns = static_cast<std::int64_t>(absolute_frame * sim_time_step_ns);
+            ctx.hw_time_ns = static_cast<std::int64_t>(absolute_frame * hw_time_step_ns);
             ctx.seed_version = 1;
             ctx.rng = rng_callback;
             ctx.rng_state = &seed_state;

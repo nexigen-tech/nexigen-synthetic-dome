@@ -68,18 +68,21 @@ jobs:
         run: |
           # TODO: remove this step once nexigen-cpp commits cmake/nexigenConfig.cmake.in
           # instead of ignoring *.cmake.in in its .gitignore.
-          cat > ../nexigen-ecosystem/nexigen-cpp/cmake/nexigenConfig.cmake.in <<'EOF'
-          @PACKAGE_INIT@
-
-          # nexigen-cpp package configuration.
-          include(CMakeFindDependencyMacro)
-          find_dependency(Threads)
-          find_dependency(nlohmann_json)
-          include("${CMAKE_CURRENT_LIST_DIR}/nexigenTargets.cmake")
-          set_property(TARGET nexigen::core APPEND PROPERTY
-              INTERFACE_LINK_LIBRARIES nlohmann_json::nlohmann_json)
-          check_required_components(nexigen)
-          EOF
+          python3 - <<'PY'
+          from pathlib import Path
+          Path("../nexigen-ecosystem/nexigen-cpp/cmake/nexigenConfig.cmake.in").write_text(
+              "@PACKAGE_INIT@\n"
+              "\n"
+              "# nexigen-cpp package configuration.\n"
+              "include(CMakeFindDependencyMacro)\n"
+              "find_dependency(Threads)\n"
+              "find_dependency(nlohmann_json)\n"
+              "include(\"${CMAKE_CURRENT_LIST_DIR}/nexigenTargets.cmake\")\n"
+              "set_property(TARGET nexigen::core APPEND PROPERTY\n"
+              "    INTERFACE_LINK_LIBRARIES nlohmann_json::nlohmann_json)\n"
+              "check_required_components(nexigen)\n"
+          )
+          PY
 
       - name: Install system dependencies
         run: |
@@ -106,17 +109,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Cache CMake dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ matrix.build-dir }}/_deps
-          key: ${{ runner.os }}-${{ matrix.name }}-deps-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.name }}-deps-
+      # CMake dependency cache disabled while diagnosing configure failures.
+      # - name: Cache CMake dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ${{ matrix.build-dir }}/_deps
+      #     key: ${{ runner.os }}-${{ matrix.name }}-deps-v2-${{ hashFiles('CMakeLists.txt') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-${{ matrix.name }}-deps-v2-
 
       - name: Configure
-        run: cmake -S . -B ${{ matrix.build-dir }} ${{ matrix.cmake-args }}
+        run: |
+          python3 - <<'PY'
+          import subprocess, sys, os
+          args = ["cmake", "-S", ".", "-B", "${{ matrix.build-dir }}"]
+          cmake_args = "${{ matrix.cmake-args }}".strip()
+          if cmake_args:
+              args.extend(cmake_args.split())
+          result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+          with open("configure.log", "w") as f:
+              f.write(result.stdout)
+          if result.returncode != 0:
+              print("=== configure.log (last 100 lines) ===")
+              lines = result.stdout.splitlines()
+              print("\n".join(lines[-100:]))
+              build_dir = "${{ matrix.build-dir }}"
+              for log_name in ["CMakeFiles/CMakeOutput.log", "CMakeFiles/CMakeError.log"]:
+                  path = os.path.join(build_dir, log_name)
+                  print(f"=== {log_name} ===")
+                  if os.path.exists(path):
+                      with open(path) as f:
+                          print(f.read())
+                  else:
+                      print("(not found)")
+          sys.exit(result.returncode)
+          PY
 
       - name: Build
         run: cmake --build ${{ matrix.build-dir }} -j$(nproc)

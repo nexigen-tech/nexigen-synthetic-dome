@@ -28,7 +28,7 @@ jobs:
             needs-xvfb: true
           - name: clang
             build-dir: build-clang
-            cmake-args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+            cmake-args: -DCMAKE_C_COMPILER=clang-19 -DCMAKE_CXX_COMPILER=clang++-19
             needs-xvfb: true
           - name: asan
             build-dir: build-asan
@@ -91,7 +91,8 @@ jobs:
             cmake \
             ninja-build \
             g++ \
-            clang \
+            clang-19 \
+            libstdc++-13-dev \
             xvfb \
             libgl1-mesa-dev
 
@@ -105,6 +106,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
+            ~/.cargo/bin
             ~/.cargo/registry
             ~/.cargo/git
             target

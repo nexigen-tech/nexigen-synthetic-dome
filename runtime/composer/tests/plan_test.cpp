@@ -100,5 +100,37 @@ int main() {
     // Invalid JSON is rejected.
     if (composer::DomePlan::from_json("{not json").has_value()) return 6;
 
+    // New optional service sections round-trip through defaults.
+    composer::DomePlan services_plan{};
+    services_plan.recording.enabled = true;
+    services_plan.recording.output_path = "/tmp/recorded.mcap";
+    composer::PlanRecordingTopic topic{};
+    topic.source_name = "telemetry";
+    topic.element_size = 4;
+    topic.max_count = 1;
+    topic.schema_name = "SignalValueF32@1.0.0";
+    services_plan.recording.topics.push_back(topic);
+
+    services_plan.replay.enabled = true;
+    services_plan.replay.input_path = "/tmp/replay.mcap";
+
+    services_plan.validation.enabled = true;
+    composer::PlanValidationRule rule{};
+    rule.name = "telemetry_below_100";
+    rule.topic = "telemetry";
+    rule.op = "less_than";
+    rule.field.path = "value";
+    rule.field.offset = 0;
+    rule.field.size = 4;
+    rule.field.is_floating = true;
+    rule.has_constant = true;
+    rule.constant = 100.0;
+    services_plan.validation.rules.push_back(rule);
+
+    const auto services_json = services_plan.to_json();
+    const auto services_parsed = composer::DomePlan::from_json(services_json);
+    if (!services_parsed.has_value()) return 7;
+    if (*services_parsed != services_plan) return 8;
+
     return 0;
 }

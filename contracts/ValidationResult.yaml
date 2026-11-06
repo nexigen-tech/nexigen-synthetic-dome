@@ -1,0 +1,50 @@
+contract:
+  name: ValidationResult
+  version: "1.0.0"
+  description: Final validation report produced at the end of a run.
+
+types:
+  - name: Outcome
+    kind: enum
+    underlying: u8
+    values:
+      - name: Pass
+        value: 0
+      - name: Fail
+        value: 1
+
+  - name: FailureEntry
+    kind: record
+    fields:
+      - name: rule_name
+        type: u8[64]
+        description: NUL-padded rule name.
+      - name: sim_time_ns
+        type: i64
+        description: Simulation time when the failure occurred.
+      - name: offending_value
+        type: f64
+        description: Numeric offending value for threshold comparisons.
+      - name: reason
+        type: u8[128]
+        description: NUL-padded human-readable failure reason.
+
+fields:
+  - name: outcome
+    type: Outcome
+    description: Overall pass or fail outcome.
+  - name: rule_count
+    type: u32
+    description: Number of evaluated rules.
+  - name: pass_count
+    type: u64
+    description: Number of passing evaluations.
+  - name: fail_count
+    type: u64
+    description: Number of failing evaluations.
+  - name: failure_count
+    type: u32
+    description: Number of entries populated in the failures array.
+  - name: failures
+    type: FailureEntry[64]
+    description: Fixed-size array of per-failure details.

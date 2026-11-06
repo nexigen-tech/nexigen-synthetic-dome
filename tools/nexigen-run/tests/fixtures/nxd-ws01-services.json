@@ -1,0 +1,67 @@
+{
+  "version_major": 1,
+  "version_minor": 0,
+  "chronos": {
+    "mode": 3,
+    "base_frame_interval_ns": 1000000,
+    "scale_factor": 1
+  },
+  "partitions": [
+    {
+      "id": 1,
+      "name": "p1",
+      "instance_ids": ["echo"]
+    }
+  ],
+  "let_boundaries": [],
+  "wires": [],
+  "processes": [
+    {
+      "id": "echo_proc",
+      "executable": "./nxd-ws01-echo",
+      "instance_ids": ["echo"]
+    }
+  ],
+  "recording": {
+    "enabled": true,
+    "output_path": "recorded.mcap",
+    "topics": [
+      {
+        "source_name": "telemetry",
+        "element_size": 4,
+        "max_count": 1,
+        "layout_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "schema_name": "SignalValueF32@1.0.0"
+      }
+    ]
+  },
+  "replay": {
+    "enabled": true,
+    "input_path": "replay.mcap",
+    "loop": false,
+    "speed": 1.0,
+    "autostart": true
+  },
+  "validation": {
+    "enabled": true,
+    "rules": [
+      {
+        "name": "telemetry_below_100",
+        "topic": "telemetry",
+        "op": "less_than",
+        "field": {
+          "path": "value",
+          "offset": 0,
+          "size": 4,
+          "is_floating": true,
+          "is_signed": false
+        },
+        "has_constant": true,
+        "constant": 100.0,
+        "element_size": 4,
+        "max_count": 1,
+        "layout_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ]
+  }
+}

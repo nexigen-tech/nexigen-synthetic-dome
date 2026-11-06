@@ -136,6 +136,31 @@ const Entry* Blackboard::open_entry(std::string_view name,
     return nullptr;
 }
 
+std::size_t Blackboard::entry_count() const noexcept {
+    std::lock_guard lock(mutex_);
+    std::size_t count = 0;
+    for (const auto& slot : slots_) {
+        if (slot.entry) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+const Entry* Blackboard::entry(std::size_t index) const noexcept {
+    std::lock_guard lock(mutex_);
+    std::size_t current = 0;
+    for (const auto& slot : slots_) {
+        if (slot.entry) {
+            if (current == index) {
+                return slot.entry.get();
+            }
+            ++current;
+        }
+    }
+    return nullptr;
+}
+
 } // namespace nxd::runtime::blackboard
 
 extern "C" {
@@ -206,6 +231,26 @@ int nxd_blackboard_get_update(const NxdBlackboardEntry* entry, NxdBlackboardUpda
     }
     const auto* e = reinterpret_cast<const nxd::runtime::blackboard::Entry*>(entry);
     return e->get_update(*out_update);
+}
+
+int nxd_blackboard_entry_count(void) {
+    return static_cast<int>(nxd::runtime::blackboard::Blackboard::instance().entry_count());
+}
+
+int nxd_blackboard_get_entry_name(int index, char* out, std::size_t len) {
+    if (index < 0 || out == nullptr || len == 0) {
+        return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
+    }
+    const auto* e = nxd::runtime::blackboard::Blackboard::instance().entry(
+        static_cast<std::size_t>(index));
+    if (e == nullptr) {
+        return NXD_BLACKBOARD_ERROR_NOT_FOUND;
+    }
+    const auto name = e->name();
+    const std::size_t copy_len = std::min(name.size(), len - 1);
+    std::memcpy(out, name.data(), copy_len);
+    out[copy_len] = '\0';
+    return NXD_BLACKBOARD_OK;
 }
 
 } // extern "C"

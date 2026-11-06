@@ -8,6 +8,7 @@
 #ifndef NXD_RUNTIME_COMPOSER_PLAN_HPP
 #define NXD_RUNTIME_COMPOSER_PLAN_HPP
 
+#include <array>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -96,6 +97,76 @@ struct PlanChronosConfig final {
     [[nodiscard]] bool operator==(const PlanChronosConfig&) const noexcept = default;
 };
 
+/// Topic subscribed by the Recorder service.
+struct PlanRecordingTopic final {
+    std::string source_name;
+    std::size_t element_size = 0;
+    std::size_t max_count = 1;
+    std::array<std::uint8_t, 32> layout_hash{};
+    std::string schema_name;
+
+    [[nodiscard]] bool operator==(const PlanRecordingTopic&) const noexcept = default;
+};
+
+/// Recorder configuration embedded in a Dome Plan.
+struct PlanRecordingOptions final {
+    bool enabled = false;
+    std::string output_path;
+    std::vector<PlanRecordingTopic> topics;
+
+    [[nodiscard]] bool operator==(const PlanRecordingOptions&) const noexcept = default;
+};
+
+/// Replay configuration embedded in a Dome Plan.
+struct PlanReplayOptions final {
+    bool enabled = false;
+    std::string input_path;
+    bool loop = false;
+    double speed = 1.0;
+    bool autostart = true;
+
+    [[nodiscard]] bool operator==(const PlanReplayOptions&) const noexcept = default;
+};
+
+/// Field description used by validation rules.
+struct PlanValidationFieldSpec final {
+    std::string path;
+    std::size_t offset = 0;
+    std::size_t size = 0;
+    bool is_floating = false;
+    bool is_signed = false;
+
+    [[nodiscard]] bool operator==(const PlanValidationFieldSpec&) const noexcept = default;
+};
+
+/// Validation rule declared in a Dome Plan.
+struct PlanValidationRule final {
+    std::string name;
+    std::string topic;
+    std::string blackboard_key;
+    std::string op;
+    PlanValidationFieldSpec field;
+    PlanValidationFieldSpec reference_field;
+    double constant = 0.0;
+    bool has_constant = false;
+    std::string constant_string;
+    bool is_blackboard_rule = false;
+    std::string reason_template;
+    std::size_t element_size = 0;
+    std::size_t max_count = 1;
+    std::array<std::uint8_t, 32> layout_hash{};
+
+    [[nodiscard]] bool operator==(const PlanValidationRule&) const noexcept = default;
+};
+
+/// Validation service configuration embedded in a Dome Plan.
+struct PlanValidationOptions final {
+    bool enabled = false;
+    std::vector<PlanValidationRule> rules;
+
+    [[nodiscard]] bool operator==(const PlanValidationOptions&) const noexcept = default;
+};
+
 /// Dome Plan produced by the Composer and consumed by `nexigen-run`.
 struct DomePlan final {
     std::uint32_t version_major = dome_plan_version_major;
@@ -107,6 +178,9 @@ struct DomePlan final {
     std::vector<Process> processes;
     std::vector<PlanThreadRoleAssignment> thread_role_assignments;
     std::vector<PlanParameterAssignment> parameter_assignments;
+    PlanRecordingOptions recording;
+    PlanReplayOptions replay;
+    PlanValidationOptions validation;
 
     /// Serializes the plan to a JSON string.
     [[nodiscard]] std::string to_json() const;

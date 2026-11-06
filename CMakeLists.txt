@@ -61,11 +61,14 @@ set(NXD_CONTRACT_SOURCES
     "${NXD_CONTRACTS_DIR}/ScenarioState.yaml"
     "${NXD_CONTRACTS_DIR}/ScenarioCommand.yaml"
     "${NXD_CONTRACTS_DIR}/BlackboardUpdate.yaml"
-    "${NXD_CONTRACTS_DIR}/BlackboardValue.yaml")
+    "${NXD_CONTRACTS_DIR}/BlackboardValue.yaml"
+    "${NXD_CONTRACTS_DIR}/RecordingMetadata.yaml"
+    "${NXD_CONTRACTS_DIR}/ReplayControl.yaml"
+    "${NXD_CONTRACTS_DIR}/ValidationResult.yaml")
 
 # Concrete contracts that produce exactly one header.
 set(NXD_SINGLE_HEADERS)
-foreach(yaml IN ITEMS SampleHeader RawCanFrame NestedRecord CanHeartbeat CanAggregateErrors VideoFrame VideoHeartbeat VideoAggregateErrors ScenarioState ScenarioCommand BlackboardUpdate)
+foreach(yaml IN ITEMS SampleHeader RawCanFrame NestedRecord CanHeartbeat CanAggregateErrors VideoFrame VideoHeartbeat VideoAggregateErrors ScenarioState ScenarioCommand BlackboardUpdate RecordingMetadata ReplayControl ValidationResult)
     set(source "${NXD_CONTRACTS_DIR}/${yaml}.yaml")
     set(header "${NXD_GENERATED_CONTRACTS_DIR}/${yaml}.hpp")
     list(APPEND NXD_SINGLE_HEADERS "${header}")
@@ -127,6 +130,8 @@ add_subdirectory(runtime/chronos)
 add_subdirectory(runtime/composer)
 add_subdirectory(runtime/transport)
 add_subdirectory(runtime/blackboard)
+add_subdirectory(runtime/recording)
+add_subdirectory(runtime/validation)
 
 # -----------------------------------------------------------------------------
 # Walking-skeleton runner

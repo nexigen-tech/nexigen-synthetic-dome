@@ -71,6 +71,19 @@ int nxd_blackboard_read(const NxdBlackboardEntry* entry,
 int nxd_blackboard_get_update(const NxdBlackboardEntry* entry,
                               NxdBlackboardUpdate* out_update);
 
+/**
+ * Return the number of populated Blackboard entries.
+ */
+int nxd_blackboard_entry_count(void);
+
+/**
+ * Copy the name of the entry at the given populated slot index into `out`.
+ * The buffer `out` of length `len` receives a NUL-terminated name.
+ */
+int nxd_blackboard_get_entry_name(int index,
+                                    char* out,
+                                    std::size_t len);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

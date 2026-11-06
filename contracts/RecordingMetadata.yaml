@@ -1,0 +1,32 @@
+contract:
+  name: RecordingMetadata
+  version: "1.0.0"
+  description: Metadata attachment describing a recorded run and its channels.
+
+types:
+  - name: ChannelInfo
+    kind: record
+    fields:
+      - name: source_name
+        type: u8[64]
+        description: NUL-padded source topic name.
+      - name: schema_name
+        type: u8[64]
+        description: NUL-padded canonical schema name and version.
+      - name: message_count
+        type: u64
+        description: Number of messages recorded on this channel.
+
+fields:
+  - name: run_id
+    type: u8[16]
+    description: Unique run identifier, interpreted as UUID bytes.
+  - name: start_sim_time_ns
+    type: i64
+    description: Simulation time at recording start in nanoseconds.
+  - name: channel_count
+    type: u32
+    description: Number of recorded channels, capped at channels array capacity.
+  - name: channels
+    type: ChannelInfo[32]
+    description: Fixed-size array of recorded channel summaries.

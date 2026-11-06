@@ -1,0 +1,38 @@
+contract:
+  name: ReplayControl
+  version: "1.0.0"
+  description: Runtime command controlling replay playback.
+
+types:
+  - name: Command
+    kind: enum
+    underlying: u8
+    values:
+      - name: Stop
+        value: 0
+      - name: Start
+        value: 1
+      - name: Pause
+        value: 2
+      - name: Resume
+        value: 3
+      - name: Seek
+        value: 4
+      - name: SetSpeed
+        value: 5
+      - name: SetLoop
+        value: 6
+
+fields:
+  - name: command
+    type: Command
+    description: Command to apply to the replay source.
+  - name: target_sim_time_ns
+    type: i64
+    description: Target simulation time for Seek command.
+  - name: speed
+    type: f64
+    description: Playback speed multiplier for SetSpeed command.
+  - name: loop_enabled
+    type: u8
+    description: 1 to enable looping, 0 otherwise.

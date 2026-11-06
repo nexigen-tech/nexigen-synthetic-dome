@@ -22,6 +22,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Detect sanitizer builds so performance tests can be disabled or adjusted.
+set(NXD_SANITIZER_BUILD FALSE)
+if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=")
+    set(NXD_SANITIZER_BUILD TRUE)
+endif()
+
 # Build-local path to the sibling nexigen-cpp repository.
 set(NEXIGEN_CPP_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../nexigen-ecosystem/nexigen-cpp"
     CACHE PATH "Path to the local nexigen-cpp repository")
@@ -364,7 +370,7 @@ foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor v
     add_custom_command(
         OUTPUT "${json}" "${hash}"
         COMMAND cargo run -q -p nxdc -- emit-component-descriptor "${yaml}" "${json}"
-        DEPENDS "${yaml}"
+        DEPENDS "${yaml}" ${NXD_CONTRACT_SOURCES}
         COMMENT "Generating descriptor and hash for ${component}"
         VERBATIM)
     list(APPEND NXD_DESCRIPTOR_FILES "${json}" "${hash}")
@@ -810,6 +816,9 @@ add_test(NAME nxd_host_video_end_to_end
             "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
 set_tests_properties(nxd_host_video_end_to_end PROPERTIES
     DEPENDS "nxd_example_virtual_video_cpp;nxd_component_descriptors")
+if(NXD_SANITIZER_BUILD)
+    set_tests_properties(nxd_host_video_end_to_end PROPERTIES DISABLED TRUE)
+endif()
 
 add_executable(nxd_video_viewer_latency_test tests/video_viewer_latency_test.cpp)
 target_compile_options(nxd_video_viewer_latency_test PRIVATE
@@ -826,6 +835,9 @@ add_test(NAME nxd_video_viewer_latency
             "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
 set_tests_properties(nxd_video_viewer_latency PROPERTIES
     DEPENDS "nxd_video_viewer;nxd_example_virtual_video_cpp;nxd_component_descriptors")
+if(NXD_SANITIZER_BUILD)
+    set_tests_properties(nxd_video_viewer_latency PROPERTIES DISABLED TRUE)
+endif()
 
 add_executable(nxd_host_scenario_control_test tests/host_scenario_control_test.cpp)
 target_link_libraries(nxd_host_scenario_control_test PRIVATE nxd_host nxd_blackboard)

@@ -9,7 +9,7 @@ add_executable(nexigen-run
 add_executable(nxd-ws01-echo
     tests/fixtures/echo_component.cpp)
 
-add_dependencies(nexigen-run nxd_generated_headers)
+add_dependencies(nexigen-run nxd_generated_headers nxd-ws01-replay-fixture-gen)
 
 target_link_libraries(nexigen-run PRIVATE
     nxd_composer
@@ -82,7 +82,8 @@ add_custom_command(TARGET nxd-ws01-echo POST_BUILD
 
 add_custom_command(TARGET nexigen-run POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/nxd-ws01.json" "${NXD_WS01_FIXTURE_DIR}/nxd-ws01.json"
-    COMMENT "Copying committed nxd-ws01 plan"
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/nxd-ws01-services.json" "${NXD_WS01_FIXTURE_DIR}/nxd-ws01-services.json"
+    COMMENT "Copying committed nxd-ws01 plans"
     VERBATIM)
 
 add_custom_command(TARGET nxd-ws01-replay-fixture-gen POST_BUILD

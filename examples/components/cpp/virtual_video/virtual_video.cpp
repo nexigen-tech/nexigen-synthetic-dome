@@ -24,7 +24,6 @@ using nxd::contracts::VideoFrame;
 using nxd::contracts::VideoHeartbeat;
 using nxd::contracts::VideoHeartbeatStatus;
 
-constexpr std::int64_t kFrameNs = 1'000'000;          // 1 ms base frame
 constexpr std::int64_t kVideoFrameNs = 20'000'000;    // 20 ms for 50 FPS
 constexpr std::uint32_t kWidth = 1920;
 constexpr std::uint32_t kHeight = 1080;

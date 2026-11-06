@@ -21,6 +21,13 @@ target_compile_options(nxd_blackboard PUBLIC
     -Wextra
     -Werror)
 
+# TSan cannot reason about std::atomic_thread_fence; suppress the resulting
+# warning on the seqlock implementation until it is rewritten with explicit
+# atomic load/store ordering.
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND CMAKE_CXX_FLAGS MATCHES "-fsanitize=thread")
+    target_compile_options(nxd_blackboard PRIVATE -Wno-tsan)
+endif()
+
 set_target_properties(nxd_blackboard PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON

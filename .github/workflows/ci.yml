@@ -62,7 +62,7 @@ jobs:
       - name: Clone nexigen-cpp sibling dependency
         run: |
           mkdir -p ../nexigen-ecosystem
-          git clone --depth 1 https://github.com/nexigen-tech/nexigen-cpp.git ../nexigen-ecosystem/nexigen-cpp
+          git clone --depth 1 --branch learning-enhancement https://github.com/nexigen-tech/nexigen-cpp.git ../nexigen-ecosystem/nexigen-cpp
 
       - name: Patch missing nexigen-cpp cmake config template
         run: |

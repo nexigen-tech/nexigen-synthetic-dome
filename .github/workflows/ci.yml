@@ -59,6 +59,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Clone nexigen-cpp sibling dependency
+        run: |
+          mkdir -p ../nexigen-ecosystem
+          git clone --depth 1 https://github.com/nexigen-tech/nexigen-cpp.git ../nexigen-ecosystem/nexigen-cpp
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -107,11 +112,14 @@ jobs:
             ctest --test-dir ${{ matrix.build-dir }} --output-on-failure -j$(nproc)
           fi
 
-      - name: Upload test logs on failure
+      - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs-${{ matrix.name }}
+          name: logs-${{ matrix.name }}
           path: |
             ${{ matrix.build-dir }}/Testing/Temporary/LastTest.log
             ${{ matrix.build-dir }}/Testing/Temporary/LastTestsFailed.log
+            ${{ matrix.build-dir }}/CMakeFiles/CMakeOutput.log
+            ${{ matrix.build-dir }}/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore

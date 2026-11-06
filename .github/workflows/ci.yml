@@ -98,6 +98,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:

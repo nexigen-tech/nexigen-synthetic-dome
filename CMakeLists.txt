@@ -821,23 +821,25 @@ if(NXD_SANITIZER_BUILD)
     set_tests_properties(nxd_host_video_end_to_end PROPERTIES DISABLED TRUE)
 endif()
 
-add_executable(nxd_video_viewer_latency_test tests/video_viewer_latency_test.cpp)
-target_compile_options(nxd_video_viewer_latency_test PRIVATE
-    -fno-exceptions
-    -fno-rtti
-    -Wall
-    -Wextra
-    -Werror)
-add_dependencies(nxd_video_viewer_latency_test nxd_video_viewer nxd_example_virtual_video_cpp nxd_component_descriptors)
-add_test(NAME nxd_video_viewer_latency
-    COMMAND nxd_video_viewer_latency_test
-            "$<TARGET_FILE:nxd_video_viewer>"
-            "${NXD_COMPONENT_DESCRIPTORS_DIR}/virtual_video.descriptor.json"
-            "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
-set_tests_properties(nxd_video_viewer_latency PROPERTIES
-    DEPENDS "nxd_video_viewer;nxd_example_virtual_video_cpp;nxd_component_descriptors")
-if(NXD_SANITIZER_BUILD)
-    set_tests_properties(nxd_video_viewer_latency PROPERTIES DISABLED TRUE)
+if(TARGET nxd_video_viewer)
+    add_executable(nxd_video_viewer_latency_test tests/video_viewer_latency_test.cpp)
+    target_compile_options(nxd_video_viewer_latency_test PRIVATE
+        -fno-exceptions
+        -fno-rtti
+        -Wall
+        -Wextra
+        -Werror)
+    add_dependencies(nxd_video_viewer_latency_test nxd_video_viewer nxd_example_virtual_video_cpp nxd_component_descriptors)
+    add_test(NAME nxd_video_viewer_latency
+        COMMAND nxd_video_viewer_latency_test
+                "$<TARGET_FILE:nxd_video_viewer>"
+                "${NXD_COMPONENT_DESCRIPTORS_DIR}/virtual_video.descriptor.json"
+                "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
+    set_tests_properties(nxd_video_viewer_latency PROPERTIES
+        DEPENDS "nxd_video_viewer;nxd_example_virtual_video_cpp;nxd_component_descriptors")
+    if(NXD_SANITIZER_BUILD)
+        set_tests_properties(nxd_video_viewer_latency PROPERTIES DISABLED TRUE)
+    endif()
 endif()
 
 add_executable(nxd_host_scenario_control_test tests/host_scenario_control_test.cpp)

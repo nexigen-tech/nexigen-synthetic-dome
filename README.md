@@ -1,9 +1,7 @@
-[shields.io)](https://shields.io)) Dome (NexDome)
+# NexDome
 
-![Standard](https://shields.io)
-[![Build Status](https://shields.io)](https://github.com)
-[![Middleware](https://shields.io)](https://github.com)
-[![License](https://shields.io)](LICENSE)
+[![CI](https://github.com/nexigen-tech/nexigen-synthetic-dome/actions/workflows/ci.yml/badge.svg)](https://github.com/nexigen-tech/nexigen-synthetic-dome/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 > **"The Holodeck for your Hardware."**
 

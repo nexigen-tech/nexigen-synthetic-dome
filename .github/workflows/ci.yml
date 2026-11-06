@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feature/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            build-dir: build
+            cmake-args: ""
+            needs-xvfb: true
+          - name: debug
+            build-dir: build-debug
+            cmake-args: -DCMAKE_BUILD_TYPE=Debug
+            needs-xvfb: true
+          - name: release
+            build-dir: build-release
+            cmake-args: -DCMAKE_BUILD_TYPE=Release
+            needs-xvfb: true
+          - name: clang
+            build-dir: build-clang
+            cmake-args: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+            needs-xvfb: true
+          - name: asan
+            build-dir: build-asan
+            cmake-args: >-
+              -DCMAKE_CXX_FLAGS=-fsanitize=address
+              -DCMAKE_C_FLAGS=-fsanitize=address
+              -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address
+              -DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=address
+            needs-xvfb: false
+          - name: tsan
+            build-dir: build-tsan
+            cmake-args: >-
+              -DCMAKE_CXX_FLAGS=-fsanitize=thread
+              -DCMAKE_C_FLAGS=-fsanitize=thread
+              -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread
+              -DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=thread
+            needs-xvfb: false
+          - name: ubsan
+            build-dir: build-ubsan
+            cmake-args: >-
+              -DCMAKE_CXX_FLAGS=-fsanitize=undefined
+              -DCMAKE_C_FLAGS=-fsanitize=undefined
+              -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=undefined
+              -DCMAKE_SHARED_LINKER_FLAGS=-fsanitize=undefined
+            needs-xvfb: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            g++ \
+            clang \
+            xvfb \
+            libgl1-mesa-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ matrix.build-dir }}/_deps
+          key: ${{ runner.os }}-${{ matrix.name }}-deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.name }}-deps-
+
+      - name: Configure
+        run: cmake -S . -B ${{ matrix.build-dir }} ${{ matrix.cmake-args }}
+
+      - name: Build
+        run: cmake --build ${{ matrix.build-dir }} -j$(nproc)
+
+      - name: Test
+        run: |
+          if [ "${{ matrix.needs-xvfb }}" = "true" ]; then
+            xvfb-run ctest --test-dir ${{ matrix.build-dir }} --output-on-failure -j$(nproc)
+          else
+            ctest --test-dir ${{ matrix.build-dir }} --output-on-failure -j$(nproc)
+          fi
+
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.name }}
+          path: |
+            ${{ matrix.build-dir }}/Testing/Temporary/LastTest.log
+            ${{ matrix.build-dir }}/Testing/Temporary/LastTestsFailed.log

@@ -1,0 +1,34 @@
+contract:
+  name: BlackboardValue
+  version: "1.0.0"
+  description: Generic Blackboard entry wrapper with revision metadata and a bounded payload.
+
+params:
+  - name: N
+    kind: integer
+    type: u32
+    min: 1
+    max: 4096
+    default: 64
+
+fields:
+  - name: revision
+    type: u64
+    description: Entry revision.
+  - name: apply_frame_no
+    type: u64
+    description: Frame on which the value takes effect.
+  - name: generation
+    type: u64
+    description: Entry generation.
+  - name: payload
+    type: u8[N]
+    description: Versioned POD payload bytes.
+
+concrete:
+  - name: BlackboardValue64
+    params:
+      N: 64
+  - name: BlackboardValue256
+    params:
+      N: 256

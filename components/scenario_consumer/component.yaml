@@ -1,0 +1,28 @@
+component:
+  name: ScenarioConsumer
+  version: "1.0.0"
+sdk:
+  abi_major: 1
+  abi_minor: 0
+contracts:
+  - name: SignalValue
+    version: "1.0.0"
+ports:
+  - name: out
+    direction: out
+    contract: SignalValueU32
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+parameters: []
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: false
+    default_schedule: fifo
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+supported_modes: [headless]

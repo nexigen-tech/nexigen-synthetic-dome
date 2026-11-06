@@ -6,7 +6,9 @@ members = [
     "sdk/rust/nxd-sdk",
     "runtime/chronos/rust",
     "examples/components/rust/counter",
+    "examples/components/rust/scenario_control",
     "tests/components/rust/alloc_counter",
+    "tests/components/rust/scenario_control_alloc",
     "tests/components/rust/panic_step",
     "tests/components/rust/port_io",
 ]

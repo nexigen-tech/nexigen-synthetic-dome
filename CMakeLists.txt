@@ -57,11 +57,15 @@ set(NXD_CONTRACT_SOURCES
     "${NXD_CONTRACTS_DIR}/CanAggregateErrors.yaml"
     "${NXD_CONTRACTS_DIR}/VideoFrame.yaml"
     "${NXD_CONTRACTS_DIR}/VideoHeartbeat.yaml"
-    "${NXD_CONTRACTS_DIR}/VideoAggregateErrors.yaml")
+    "${NXD_CONTRACTS_DIR}/VideoAggregateErrors.yaml"
+    "${NXD_CONTRACTS_DIR}/ScenarioState.yaml"
+    "${NXD_CONTRACTS_DIR}/ScenarioCommand.yaml"
+    "${NXD_CONTRACTS_DIR}/BlackboardUpdate.yaml"
+    "${NXD_CONTRACTS_DIR}/BlackboardValue.yaml")
 
 # Concrete contracts that produce exactly one header.
 set(NXD_SINGLE_HEADERS)
-foreach(yaml IN ITEMS SampleHeader RawCanFrame NestedRecord CanHeartbeat CanAggregateErrors VideoFrame VideoHeartbeat VideoAggregateErrors)
+foreach(yaml IN ITEMS SampleHeader RawCanFrame NestedRecord CanHeartbeat CanAggregateErrors VideoFrame VideoHeartbeat VideoAggregateErrors ScenarioState ScenarioCommand BlackboardUpdate)
     set(source "${NXD_CONTRACTS_DIR}/${yaml}.yaml")
     set(header "${NXD_GENERATED_CONTRACTS_DIR}/${yaml}.hpp")
     list(APPEND NXD_SINGLE_HEADERS "${header}")
@@ -99,8 +103,18 @@ add_custom_command(
     COMMENT "Generating C++ headers for SignalValue concrete instances"
     VERBATIM)
 
+set(NXD_BLACKBOARDVALUE_HEADERS
+    "${NXD_GENERATED_CONTRACTS_DIR}/BlackboardValue64.hpp"
+    "${NXD_GENERATED_CONTRACTS_DIR}/BlackboardValue256.hpp")
+add_custom_command(
+    OUTPUT ${NXD_BLACKBOARDVALUE_HEADERS}
+    COMMAND cargo run -q -p nxdc -- emit-cpp "${NXD_CONTRACTS_DIR}/BlackboardValue.yaml" "${NXD_GENERATED_CONTRACTS_DIR}"
+    DEPENDS "${NXD_CONTRACTS_DIR}/BlackboardValue.yaml"
+    COMMENT "Generating C++ headers for BlackboardValue concrete instances"
+    VERBATIM)
+
 add_custom_target(nxd_generated_headers
-    DEPENDS ${NXD_SINGLE_HEADERS} ${NXD_BATCH_HEADERS} ${NXD_SIGNALVALUE_HEADERS})
+    DEPENDS ${NXD_SINGLE_HEADERS} ${NXD_BATCH_HEADERS} ${NXD_SIGNALVALUE_HEADERS} ${NXD_BLACKBOARDVALUE_HEADERS})
 
 # -----------------------------------------------------------------------------
 # Chronos runtime
@@ -112,6 +126,7 @@ add_subdirectory(runtime/chronos)
 # -----------------------------------------------------------------------------
 add_subdirectory(runtime/composer)
 add_subdirectory(runtime/transport)
+add_subdirectory(runtime/blackboard)
 
 # -----------------------------------------------------------------------------
 # Walking-skeleton runner
@@ -220,6 +235,22 @@ target_compile_options(nxd_example_video_opengl_cpp PRIVATE
     -Wall
     -Wextra
     -Werror)
+
+add_library(nxd_example_scenario_consumer_cpp SHARED examples/components/cpp/scenario_consumer/scenario_consumer.cpp)
+add_dependencies(nxd_example_scenario_consumer_cpp nxd_abi_header nxd_generated_headers nxd_blackboard)
+target_include_directories(nxd_example_scenario_consumer_cpp PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime/blackboard/include"
+    "${NXD_GENERATED_CPP_DIR}")
+target_link_libraries(nxd_example_scenario_consumer_cpp PRIVATE nxd_blackboard)
+target_compile_options(nxd_example_scenario_consumer_cpp PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+
 set(NXD_ABI_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi/nxd_abi.h")
 set(NXD_ABI_HPP "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include/nxd/abi.hpp")
 
@@ -266,6 +297,8 @@ set(NXD_RUST_COUNTER_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_examp
 set(NXD_RUST_ALLOC_COUNTER_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_alloc_counter_rust.so")
 set(NXD_RUST_PANIC_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_panic_rust.so")
 set(NXD_RUST_PORT_IO_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_port_io_rust.so")
+set(NXD_RUST_SCENARIO_CONTROL_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_example_scenario_control.so")
+set(NXD_RUST_SCENARIO_CONTROL_ALLOC_SO "${CMAKE_CURRENT_SOURCE_DIR}/target/release/libnxd_test_scenario_control_alloc.so")
 
 add_custom_command(
     OUTPUT "${NXD_RUST_COUNTER_SO}"
@@ -313,7 +346,7 @@ target_compile_options(nxd_host PUBLIC
 set(NXD_COMPONENT_DESCRIPTORS_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/descriptors")
 file(MAKE_DIRECTORY "${NXD_COMPONENT_DESCRIPTORS_DIR}")
 
-foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor virtual_video video_opengl)
+foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor virtual_video video_opengl scenario_control scenario_consumer)
     set(yaml_file "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}.yaml")
     set(yaml_dir "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}/component.yaml")
     if(EXISTS "${yaml_dir}")
@@ -496,6 +529,35 @@ add_custom_command(
     VERBATIM)
 
 add_custom_target(nxd_test_port_io_rust DEPENDS "${NXD_RUST_PORT_IO_SO}")
+
+add_custom_command(
+    OUTPUT "${NXD_RUST_SCENARIO_CONTROL_SO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/rust/scenario_control/Cargo.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/rust/scenario_control/src/lib.rs"
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/rust/scenario_control/src/generated/ScenarioState.rs"
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/rust/scenario_control/src/generated/ScenarioCommand.rs"
+    COMMAND ${CMAKE_COMMAND} -E env RUSTFLAGS=-L${CMAKE_CURRENT_BINARY_DIR}/runtime/blackboard
+        cargo build -p nxd-example-scenario-control ${NXD_CARGO_PROFILE}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "Building Rust scenario_control example plugin"
+    VERBATIM)
+
+add_custom_target(nxd_example_scenario_control_rust DEPENDS "${NXD_RUST_SCENARIO_CONTROL_SO}")
+
+add_custom_command(
+    OUTPUT "${NXD_RUST_SCENARIO_CONTROL_ALLOC_SO}"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/scenario_control_alloc/Cargo.toml"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/scenario_control_alloc/src/lib.rs"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/components/rust/scenario_control_alloc/src/generated/ScenarioState.rs"
+    COMMAND ${CMAKE_COMMAND} -E env RUSTFLAGS=-L${CMAKE_CURRENT_BINARY_DIR}/runtime/blackboard
+        cargo build -p nxd-test-scenario-control-alloc ${NXD_CARGO_PROFILE}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "Building Rust scenario_control allocation-after-arm test plugin"
+    VERBATIM)
+
+add_custom_target(nxd_test_scenario_control_alloc_rust DEPENDS "${NXD_RUST_SCENARIO_CONTROL_ALLOC_SO}")
 
 # -----------------------------------------------------------------------------
 # Host-side correctness tests
@@ -759,6 +821,55 @@ add_test(NAME nxd_video_viewer_latency
             "$<TARGET_FILE:nxd_example_virtual_video_cpp>")
 set_tests_properties(nxd_video_viewer_latency PROPERTIES
     DEPENDS "nxd_video_viewer;nxd_example_virtual_video_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_scenario_control_test tests/host_scenario_control_test.cpp)
+target_link_libraries(nxd_host_scenario_control_test PRIVATE nxd_host nxd_blackboard)
+target_include_directories(nxd_host_scenario_control_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime/blackboard/include"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_scenario_control_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_scenario_control_test nxd_example_scenario_control_rust nxd_example_scenario_consumer_cpp nxd_component_descriptors)
+add_test(NAME nxd_host_scenario_control
+    COMMAND nxd_host_scenario_control_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/scenario_control.descriptor.json"
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/scenario_control.descriptor.hash"
+            "${NXD_RUST_SCENARIO_CONTROL_SO}"
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/scenario_consumer.descriptor.json"
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/scenario_consumer.descriptor.hash"
+            "$<TARGET_FILE:nxd_example_scenario_consumer_cpp>")
+set_tests_properties(nxd_host_scenario_control PROPERTIES
+    DEPENDS "nxd_example_scenario_control_rust;nxd_example_scenario_consumer_cpp;nxd_component_descriptors")
+
+add_executable(nxd_host_scenario_control_alloc_test tests/host_scenario_control_alloc_test.cpp)
+target_link_libraries(nxd_host_scenario_control_alloc_test PRIVATE nxd_host nxd_blackboard)
+target_include_directories(nxd_host_scenario_control_alloc_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime/blackboard/include"
+    "${NXD_GENERATED_CPP_DIR}")
+target_compile_options(nxd_host_scenario_control_alloc_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_dependencies(nxd_host_scenario_control_alloc_test nxd_test_scenario_control_alloc_rust nxd_component_descriptors)
+add_test(NAME nxd_host_scenario_control_alloc
+    COMMAND nxd_host_scenario_control_alloc_test
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/scenario_control.descriptor.json"
+            "${NXD_COMPONENT_DESCRIPTORS_DIR}/scenario_control.descriptor.hash"
+            "${NXD_RUST_SCENARIO_CONTROL_ALLOC_SO}")
+set_tests_properties(nxd_host_scenario_control_alloc PROPERTIES
+    DEPENDS "nxd_test_scenario_control_alloc_rust;nxd_component_descriptors")
 
 # Child-process runner used by panic/failure-injection tests
 add_executable(nxd_host_child_runner tests/host_child_runner.cpp)

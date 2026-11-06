@@ -1,0 +1,21 @@
+contract:
+  name: BlackboardUpdate
+  version: "1.0.0"
+  description: Event emitted whenever a Blackboard entry changes. Used for recording and replay.
+
+fields:
+  - name: entry_name
+    type: u8[64]
+    description: NUL-padded entry name.
+  - name: layout_hash
+    type: u8[32]
+    description: SHA-256 layout hash of the entry value contract.
+  - name: revision
+    type: u64
+    description: Entry revision after the write.
+  - name: apply_frame_no
+    type: u64
+    description: Frame on which the value takes effect.
+  - name: generation
+    type: u64
+    description: Entry generation after the write.

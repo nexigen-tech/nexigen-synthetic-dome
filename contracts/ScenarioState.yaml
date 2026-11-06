@@ -1,0 +1,12 @@
+contract:
+  name: ScenarioState
+  version: "1.0.0"
+  description: Current scenario state exposed through the Blackboard.
+
+fields:
+  - name: value
+    type: u32
+    description: Active scenario value.
+  - name: generation
+    type: u32
+    description: Generation counter incremented on every applied command.

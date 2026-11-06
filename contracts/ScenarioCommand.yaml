@@ -1,0 +1,15 @@
+contract:
+  name: ScenarioCommand
+  version: "1.0.0"
+  description: Allowlisted command sent to scenario_control to change scenario state at a configured frame.
+
+fields:
+  - name: command_id
+    type: u32
+    description: Identifier from the scenario allowlist.
+  - name: apply_frame_no
+    type: u64
+    description: Frame on which the command value must take effect.
+  - name: value
+    type: u32
+    description: New scenario value.

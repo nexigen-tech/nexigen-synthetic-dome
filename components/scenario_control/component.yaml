@@ -1,0 +1,34 @@
+component:
+  name: ScenarioControl
+  version: "1.0.0"
+sdk:
+  abi_major: 1
+  abi_minor: 0
+contracts:
+  - name: ScenarioState
+    version: "1.0.0"
+  - name: ScenarioCommand
+    version: "1.0.0"
+ports:
+  - name: commands
+    direction: in
+    contract: ScenarioCommand
+    contract_version: "1.0.0"
+    semantics: event
+    required: false
+parameters:
+  - name: scenario_commands
+    type: u8[64]
+    description: NUL-padded comma-separated list of frame:value commands (e.g. "7:42,12:100").
+    default: ""
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: false
+    default_schedule: fifo
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+supported_modes: [headless]

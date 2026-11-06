@@ -1,0 +1,20 @@
+[package]
+name = "nxd-example-scenario-control"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Rust ABI-1 scenario_control plugin."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+nxd-abi = { path = "../../../../sdk/rust/nxd-abi" }
+nxd-sdk = { path = "../../../../sdk/rust/nxd-sdk" }
+libc = { version = "0.2", default-features = false }
+
+[lints.rust]
+unexpected_cfgs = "allow"

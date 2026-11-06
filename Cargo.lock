@@ -153,6 +153,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "nxd-example-scenario-control"
+version = "0.1.0-alpha"
+dependencies = [
+ "libc",
+ "nxd-abi",
+ "nxd-sdk",
+]
+
+[[package]]
 name = "nxd-runtime-chronos"
 version = "0.1.0-alpha"
 dependencies = [
@@ -187,6 +196,15 @@ dependencies = [
 
 [[package]]
 name = "nxd-test-port-io-rust"
+version = "0.1.0-alpha"
+dependencies = [
+ "libc",
+ "nxd-abi",
+ "nxd-sdk",
+]
+
+[[package]]
+name = "nxd-test-scenario-control-alloc"
 version = "0.1.0-alpha"
 dependencies = [
  "libc",

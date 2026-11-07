@@ -147,95 +147,102 @@ fn parse_template_params(node: &Yaml, diag: &mut Diagnostics) -> Vec<TemplatePar
             .and_then(|v| v.as_str())
             .unwrap_or("integer");
 
-        match kind {
-            "integer" => {
-                let Some(type_str) =
-                    hash_get_string(item_hash, "type", &format!("{path}.type"), diag)
-                else {
-                    continue;
-                };
-                let Some(ty) = parse_primitive(&type_str) else {
-                    diag.push(
-                        format!("{path}.type"),
-                        format!(
-                            "template parameter type '{type_str}' must be an integer primitive"
-                        ),
-                    );
-                    continue;
-                };
-                if !ty.is_integer() {
-                    diag.push(
-                        format!("{path}.type"),
-                        format!(
-                            "template parameter type '{type_str}' must be an integer primitive"
-                        ),
-                    );
-                    continue;
-                }
-                let min = lookup_in_hash(item_hash, "min").and_then(|v| v.as_i64());
-                let max = lookup_in_hash(item_hash, "max").and_then(|v| v.as_i64());
-                let default = lookup_in_hash(item_hash, "default").and_then(|v| v.as_i64());
-                params.push(TemplateParam {
-                    name,
-                    kind: TemplateParamKind::Integer {
-                        ty,
-                        min,
-                        max,
-                        default,
-                    },
-                });
-            }
-            "type" => {
-                let allowed = match lookup_in_hash(item_hash, "allowed").and_then(|v| v.as_vec()) {
-                    Some(items) => {
-                        let mut allowed = Vec::new();
-                        for (aidx, aitem) in items.iter().enumerate() {
-                            let apath = format!("{path}.allowed[{aidx}]");
-                            let Some(name) = aitem.as_str() else {
-                                diag.push(&apath, "expected primitive type name");
-                                continue;
-                            };
-                            let Some(ty) = parse_primitive(name) else {
-                                diag.push(
-                                    &apath,
-                                    format!("'{name}' is not a valid primitive type"),
-                                );
-                                continue;
-                            };
-                            allowed.push(ty);
-                        }
-                        if allowed.len() != items.len() {
-                            // Errors already emitted for failed entries.
-                            continue;
-                        }
-                        allowed
-                    }
-                    None => {
-                        diag.push(
-                            format!("{path}.allowed"),
-                            "expected array of allowed primitive types",
-                        );
-                        continue;
-                    }
-                };
-                let default = lookup_in_hash(item_hash, "default")
-                    .and_then(|v| v.as_str())
-                    .and_then(parse_primitive);
-                params.push(TemplateParam {
-                    name,
-                    kind: TemplateParamKind::TypeParam { allowed, default },
-                });
-            }
+        let param = match kind {
+            "integer" => parse_integer_template_param(item_hash, &name, &path, diag),
+            "type" => parse_type_template_param(item_hash, &name, &path, diag),
             _ => {
                 diag.push(
                     format!("{path}.kind"),
                     format!("unknown template parameter kind '{kind}'"),
                 );
+                None
             }
+        };
+        if let Some(p) = param {
+            params.push(p);
         }
     }
 
     params
+}
+
+fn parse_integer_template_param(
+    item_hash: &yaml_rust2::yaml::Hash,
+    name: &str,
+    path: &str,
+    diag: &mut Diagnostics,
+) -> Option<TemplateParam> {
+    let type_str = hash_get_string(item_hash, "type", &format!("{path}.type"), diag)?;
+    let Some(ty) = parse_primitive(&type_str) else {
+        diag.push(
+            format!("{path}.type"),
+            format!("template parameter type '{type_str}' must be an integer primitive"),
+        );
+        return None;
+    };
+    if !ty.is_integer() {
+        diag.push(
+            format!("{path}.type"),
+            format!("template parameter type '{type_str}' must be an integer primitive"),
+        );
+        return None;
+    }
+    let min = lookup_in_hash(item_hash, "min").and_then(|v| v.as_i64());
+    let max = lookup_in_hash(item_hash, "max").and_then(|v| v.as_i64());
+    let default = lookup_in_hash(item_hash, "default").and_then(|v| v.as_i64());
+    Some(TemplateParam {
+        name: name.to_owned(),
+        kind: TemplateParamKind::Integer {
+            ty,
+            min,
+            max,
+            default,
+        },
+    })
+}
+
+fn parse_type_template_param(
+    item_hash: &yaml_rust2::yaml::Hash,
+    name: &str,
+    path: &str,
+    diag: &mut Diagnostics,
+) -> Option<TemplateParam> {
+    let allowed = match lookup_in_hash(item_hash, "allowed").and_then(|v| v.as_vec()) {
+        Some(items) => {
+            let mut allowed = Vec::new();
+            for (aidx, aitem) in items.iter().enumerate() {
+                let apath = format!("{path}.allowed[{aidx}]");
+                let Some(name) = aitem.as_str() else {
+                    diag.push(&apath, "expected primitive type name");
+                    continue;
+                };
+                let Some(ty) = parse_primitive(name) else {
+                    diag.push(&apath, format!("'{name}' is not a valid primitive type"));
+                    continue;
+                };
+                allowed.push(ty);
+            }
+            if allowed.len() != items.len() {
+                // Errors already emitted for failed entries.
+                return None;
+            }
+            allowed
+        }
+        None => {
+            diag.push(
+                format!("{path}.allowed"),
+                "expected array of allowed primitive types",
+            );
+            return None;
+        }
+    };
+    let default = lookup_in_hash(item_hash, "default")
+        .and_then(|v| v.as_str())
+        .and_then(parse_primitive);
+    Some(TemplateParam {
+        name: name.to_owned(),
+        kind: TemplateParamKind::TypeParam { allowed, default },
+    })
 }
 
 fn parse_concrete_instances(node: &Yaml, diag: &mut Diagnostics) -> Vec<ConcreteInstance> {

@@ -140,6 +140,11 @@ add_subdirectory(runtime/recording)
 add_subdirectory(runtime/validation)
 
 # -----------------------------------------------------------------------------
+# Demo transport C shim for Rust FFI
+# -----------------------------------------------------------------------------
+add_subdirectory(runtime/demo_transport)
+
+# -----------------------------------------------------------------------------
 # Walking-skeleton runner
 # -----------------------------------------------------------------------------
 add_subdirectory(tools/nexigen-run)
@@ -357,7 +362,7 @@ target_compile_options(nxd_host PUBLIC
 set(NXD_COMPONENT_DESCRIPTORS_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/descriptors")
 file(MAKE_DIRECTORY "${NXD_COMPONENT_DESCRIPTORS_DIR}")
 
-foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor virtual_video video_opengl scenario_control scenario_consumer)
+foreach(component IN ITEMS empty deterministic_counter virtual_can can_monitor virtual_video video_opengl scenario_control scenario_consumer can_source can_sink video_source video_display)
     set(yaml_file "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}.yaml")
     set(yaml_dir "${CMAKE_CURRENT_SOURCE_DIR}/components/${component}/component.yaml")
     if(EXISTS "${yaml_dir}")
@@ -393,6 +398,77 @@ target_compile_options(nxd_example_empty_cpp PRIVATE
     -Wall
     -Wextra
     -Werror)
+
+# -----------------------------------------------------------------------------
+# can_video_demo plugins — CAN and video pipeline components
+# -----------------------------------------------------------------------------
+foreach(demo_component IN ITEMS can_source can_sink video_source video_display)
+    add_library("nxd_demo_${demo_component}_cpp" SHARED
+        "examples/components/cpp/${demo_component}/${demo_component}.cpp")
+    add_dependencies("nxd_demo_${demo_component}_cpp" nxd_abi_header nxd_generated_headers)
+    target_include_directories("nxd_demo_${demo_component}_cpp" PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+        "${NXD_GENERATED_CPP_DIR}")
+    target_compile_options("nxd_demo_${demo_component}_cpp" PRIVATE
+        -fno-exceptions
+        -fno-rtti
+        -Wall
+        -Wextra
+        -Werror)
+    # Copy .so to plans/ directory so the Dome Plan can find it
+    add_custom_command(TARGET "nxd_demo_${demo_component}_cpp" POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "$<TARGET_FILE:nxd_demo_${demo_component}_cpp>"
+            "${CMAKE_SOURCE_DIR}/plans/can_video_demo/examples/${demo_component}"
+        COMMENT "Copying ${demo_component} plugin to demo directory"
+        VERBATIM)
+endforeach()
+
+file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/plans/can_video_demo/examples")
+
+# -----------------------------------------------------------------------------
+# can_video_demo — standalone in-process demo with iceoryx2
+# -----------------------------------------------------------------------------
+add_executable(nxd_demo_can_video examples/demo/nxd_can_video_demo.cpp)
+add_dependencies(nxd_demo_can_video nxd_abi_header nxd_generated_headers nxd_transport)
+target_link_libraries(nxd_demo_can_video PRIVATE nxd_transport)
+target_include_directories(nxd_demo_can_video PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime/transport/include")
+target_compile_options(nxd_demo_can_video PRIVATE
+    -fno-exceptions -fno-rtti -Wall -Wextra -Werror)
+
+# -----------------------------------------------------------------------------
+# CAN_generator — standalone executable
+# -----------------------------------------------------------------------------
+add_executable(nxd_can_generator examples/components/cpp/can_generator_main.cpp)
+add_dependencies(nxd_can_generator nxd_abi_header nxd_generated_headers nxd_transport)
+target_link_libraries(nxd_can_generator PRIVATE nxd_transport)
+target_include_directories(nxd_can_generator PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime/transport/include")
+target_compile_options(nxd_can_generator PRIVATE
+    -fno-exceptions -fno-rtti -Wall -Wextra -Werror)
+
+# -----------------------------------------------------------------------------
+# CAN_subscriber helper — outputs RawCanBatchClassical as binary to stdout
+# Used by the Rust CAN_monitor which reads the binary stream as a child process.
+# -----------------------------------------------------------------------------
+add_executable(nxd_can_subscriber_helper examples/components/cpp/can_subscriber_helper.cpp)
+add_dependencies(nxd_can_subscriber_helper nxd_abi_header nxd_generated_headers nxd_transport)
+target_link_libraries(nxd_can_subscriber_helper PRIVATE nxd_transport)
+target_include_directories(nxd_can_subscriber_helper PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi"
+    "${NXD_GENERATED_CPP_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime/transport/include")
+target_compile_options(nxd_can_subscriber_helper PRIVATE
+    -fno-exceptions -fno-rtti -Wall -Wextra -Werror)
 
 # -----------------------------------------------------------------------------
 # C++ test plugins

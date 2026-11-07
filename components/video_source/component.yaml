@@ -1,0 +1,52 @@
+component:
+  name: VideoSource
+  version: "1.0.0"
+  description: Deterministic video source — generates RGBA VideoFrame at 50 FPS.
+
+sdk:
+  abi_major: 1
+  abi_minor: 1
+
+contracts:
+  - name: VideoFrame
+    version: "1.0.0"
+
+ports:
+  - name: out
+    direction: out
+    contract: VideoFrame
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+
+parameters:
+  - name: source_name
+    type: u8[8]
+    default: "VIDEO_SRC"
+    description: ASCII source name for identification.
+    required: false
+  - name: width
+    type: u32
+    default: 320
+    description: Frame width in pixels (small for demo).
+    required: false
+  - name: height
+    type: u32
+    default: 240
+    description: Frame height in pixels (small for demo).
+    required: false
+
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+
+supported_modes:
+  - headless

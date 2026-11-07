@@ -1,0 +1,42 @@
+component:
+  name: VideoDisplay
+  version: "1.0.0"
+  description: Video display — receives VideoFrame and prints reception metadata.
+
+sdk:
+  abi_major: 1
+  abi_minor: 1
+
+contracts:
+  - name: VideoFrame
+    version: "1.0.0"
+
+ports:
+  - name: in
+    direction: in
+    contract: VideoFrame
+    contract_version: "1.0.0"
+    semantics: signal
+    required: true
+
+parameters:
+  - name: source_name
+    type: u8[8]
+    default: "VIDEO_DISP"
+    description: ASCII source name for identification.
+    required: false
+
+thread_roles:
+  - name: main
+    required: true
+    single_cpu: true
+    default_schedule: fifo
+
+resources:
+  max_heap_bytes: 0
+  deterministic: true
+  uses_rng: false
+  requires_hardware_rt: false
+
+supported_modes:
+  - headless

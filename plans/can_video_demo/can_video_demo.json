@@ -1,0 +1,60 @@
+{
+  "version_major": 1,
+  "version_minor": 0,
+  "chronos": {
+    "mode": 3,
+    "base_frame_interval_ns": 1000000,
+    "scale_factor": 1
+  },
+  "partitions": [
+    {
+      "id": 1,
+      "name": "can_demo",
+      "instance_ids": ["can_source", "can_sink"]
+    },
+    {
+      "id": 2,
+      "name": "video_demo",
+      "instance_ids": ["video_source", "video_display"]
+    }
+  ],
+  "let_boundaries": [],
+  "wires": [
+    {
+      "source_instance": "can_source",
+      "source_port": "out",
+      "target_instance": "can_sink",
+      "target_port": "in",
+      "let_boundary_id": ""
+    },
+    {
+      "source_instance": "video_source",
+      "source_port": "out",
+      "target_instance": "video_display",
+      "target_port": "in",
+      "let_boundary_id": ""
+    }
+  ],
+  "processes": [
+    {
+      "id": "can_source_proc",
+      "executable": "./examples/can_source",
+      "instance_ids": ["can_source"]
+    },
+    {
+      "id": "can_sink_proc",
+      "executable": "./examples/can_sink",
+      "instance_ids": ["can_sink"]
+    },
+    {
+      "id": "video_source_proc",
+      "executable": "./examples/video_source",
+      "instance_ids": ["video_source"]
+    },
+    {
+      "id": "video_display_proc",
+      "executable": "./examples/video_display",
+      "instance_ids": ["video_display"]
+    }
+  ]
+}

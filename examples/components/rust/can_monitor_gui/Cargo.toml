@@ -1,0 +1,11 @@
+[package]
+name = "nxd-example-can-monitor-gui"
+version = "0.1.0-alpha"
+authors = ["Nexigen team"]
+edition = "2021"
+license = "MIT"
+description = "CAN monitor GUI — subscribes to iceoryx2 CAN bus via C++ helper, displays last 10 frames in Slint GUI."
+
+[dependencies]
+nxd-abi = { path = "../../../../sdk/rust/nxd-abi" }
+eframe = "0.31"

@@ -7,6 +7,7 @@ members = [
     "runtime/chronos/rust",
     "examples/components/rust/counter",
     "examples/components/rust/scenario_control",
+    "examples/components/rust/can_monitor_gui",
     "tests/components/rust/alloc_counter",
     "tests/components/rust/scenario_control_alloc",
     "tests/components/rust/panic_step",
@@ -20,6 +21,10 @@ edition = "2021"
 license = "MIT"
 rust-version = "1.93.1"
 repository = "https://github.com/nexigen/nexigen-synthetic-dome"
+homepage = "https://nexigen.io"
+categories = ["simulation"]
+keywords = ["hil", "simulation", "real-time"]
+readme = "README.md"
 
 [profile.dev]
 panic = "abort"

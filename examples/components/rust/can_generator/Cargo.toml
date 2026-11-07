@@ -1,0 +1,14 @@
+[package]
+name = "nxd-example-can-generator"
+version = "0.1.0-alpha"
+authors = ["Nexigen team"]
+edition = "2021"
+license = "MIT"
+rust-version = "1.93.1"
+repository = "https://github.com/nexigen/nexigen-synthetic-dome"
+description = "Standalone CAN generator — publishes RawCanBatchClassical on iceoryx2 every 1 ms."
+
+[dependencies]
+nxd-abi = { path = "../../../../sdk/rust/nxd-abi" }
+clap = { version = "4", features = ["derive"] }
+iceoryx2-ffi-c = { git = "https://github.com/eclipse-iceoryx/iceoryx2.git", rev = "v0.10.0", default-features = false }

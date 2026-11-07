@@ -7,8 +7,8 @@
 
 use crate::diag::Diagnostics;
 use crate::model::{
-    ArrayCount, ComponentDescriptor, ConcreteInstance, ContractSchema, Field, PrimitiveType,
-    RecordDef, TemplateParam, TemplateParamKind, Type, TypeDef,
+    ArrayCount, ComponentDescriptor, ConcreteInstance, ContractSchema, EnumDef, Field,
+    PrimitiveType, RecordDef, TemplateParam, TemplateParamKind, Type, TypeDef,
 };
 use crate::parse::parse_primitive;
 use std::collections::{HashMap, HashSet};
@@ -41,33 +41,7 @@ pub fn validate_and_instantiate(
 
     // Validate template structure: type references and parameter usages.
     validate_fields_against_template(&schema.fields, "fields", &type_names, &param_map, &mut diag);
-    for (idx, td) in schema.types.iter().enumerate() {
-        let path = format!("types[{idx}]");
-        match td {
-            TypeDef::Record(rec) => {
-                validate_fields_against_template(
-                    &rec.fields,
-                    &format!("{path}.fields"),
-                    &type_names,
-                    &param_map,
-                    &mut diag,
-                );
-            }
-            TypeDef::Enum(en) => {
-                for (vidx, ev) in en.values.iter().enumerate() {
-                    if !fits_in_type(ev.value, en.underlying) {
-                        diag.push(
-                            format!("{path}.values[{vidx}]"),
-                            format!(
-                                "value {} does not fit in underlying type {:?}",
-                                ev.value, en.underlying
-                            ),
-                        );
-                    }
-                }
-            }
-        }
-    }
+    validate_template_type_defs(&schema.types, &type_names, &param_map, &mut diag);
 
     // Validate concrete instantiations.
     let mut concrete_names = HashSet::new();
@@ -101,25 +75,71 @@ pub fn validate_and_instantiate(
         return Err(d);
     }
 
+    let result = substitute_all_concrete(schema);
+    validate_all_concrete_schemas(&result, &mut diag);
+
+    if diag.is_empty() {
+        Ok(result)
+    } else {
+        Err(diag)
+    }
+}
+
+fn validate_template_type_defs(
+    types: &[TypeDef],
+    type_names: &HashSet<String>,
+    param_map: &HashMap<String, &TemplateParam>,
+    diag: &mut Diagnostics,
+) {
+    for (idx, td) in types.iter().enumerate() {
+        let path = format!("types[{idx}]");
+        match td {
+            TypeDef::Record(rec) => {
+                validate_fields_against_template(
+                    &rec.fields,
+                    &format!("{path}.fields"),
+                    type_names,
+                    param_map,
+                    diag,
+                );
+            }
+            TypeDef::Enum(en) => {
+                validate_enum_values(en, &path, diag);
+            }
+        }
+    }
+}
+
+fn validate_enum_values(en: &EnumDef, path: &str, diag: &mut Diagnostics) {
+    for (vidx, ev) in en.values.iter().enumerate() {
+        if !fits_in_type(ev.value, en.underlying) {
+            diag.push(
+                format!("{path}.values[{vidx}]"),
+                format!(
+                    "value {} does not fit in underlying type {:?}",
+                    ev.value, en.underlying
+                ),
+            );
+        }
+    }
+}
+
+fn substitute_all_concrete(schema: &ContractSchema) -> Vec<ContractSchema> {
     let mut result = Vec::with_capacity(schema.concrete.len());
     for instance in &schema.concrete {
         result.push(substitute_concrete(schema, instance));
     }
+    result
+}
 
-    // Validate each concrete schema independently.
-    for (idx, concrete) in result.iter().enumerate() {
+fn validate_all_concrete_schemas(schemas: &[ContractSchema], diag: &mut Diagnostics) {
+    for (idx, concrete) in schemas.iter().enumerate() {
         if let Err(mut d) = validate_concrete_schema(concrete) {
             for err in &mut d.errors {
                 err.path = format!("concrete[{idx}].{}", err.path);
             }
             diag.merge(d);
         }
-    }
-
-    if diag.is_empty() {
-        Ok(result)
-    } else {
-        Err(diag)
     }
 }
 
@@ -281,64 +301,10 @@ fn validate_type_template(
     match ty {
         Type::Primitive(_) => {}
         Type::Named(name) => {
-            if param_map.contains_key(name) {
-                // A named type that matches a template parameter is valid.
-                if let Some(param) = param_map.get(name) {
-                    if !matches!(param.kind, TemplateParamKind::TypeParam { .. }) {
-                        diag.push(
-                            path,
-                            format!(
-                                "template parameter '{name}' used as a type but declared as integer"
-                            ),
-                        );
-                    }
-                }
-                return;
-            }
-            if FORBIDDEN_TYPE_NAMES.contains(&name.as_str()) {
-                diag.push(
-                    path,
-                    format!("unbounded type '{name}' is not allowed on the wire"),
-                );
-            } else if name.contains('*')
-                || name.contains('&')
-                || POINTER_PATTERNS.iter().any(|p| name.contains(p))
-            {
-                diag.push(
-                    path,
-                    format!("pointer or reference type '{name}' is not allowed on the wire"),
-                );
-            } else if looks_like_generic(name) {
-                diag.push(
-                    path,
-                    format!("unbounded generic type '{name}' is not allowed on the wire"),
-                );
-            } else if (looks_like_primitive(name) && parse_primitive(name).is_none())
-                || !is_valid_identifier(name)
-            {
-                diag.push(path, format!("malformed type '{name}'"));
-            } else if !type_names.contains(name) {
-                diag.push(path, format!("unknown type reference '{name}'"));
-            }
+            validate_named_type_template(name, type_names, param_map, path, diag);
         }
         Type::Array(element, ArrayCount::Param(param)) => {
-            if param_map.is_empty() {
-                diag.push(path, format!("malformed array count '{param}'"));
-            } else if let Some(template_param) = param_map.get(param) {
-                if !matches!(template_param.kind, TemplateParamKind::Integer { .. }) {
-                    diag.push(
-                        path,
-                        format!(
-                            "array size parameter '{param}' must be an integer template parameter"
-                        ),
-                    );
-                }
-            } else {
-                diag.push(
-                    path,
-                    format!("unknown template parameter '{param}' in array size"),
-                );
-            }
+            validate_array_param_count(param, param_map, path, diag);
             validate_type_template(element, type_names, param_map, &format!("{path}[]"), diag);
         }
         Type::Array(element, ArrayCount::Literal(n)) => {
@@ -347,6 +313,74 @@ fn validate_type_template(
             }
             validate_type_template(element, type_names, param_map, &format!("{path}[]"), diag);
         }
+    }
+}
+
+fn validate_named_type_template(
+    name: &str,
+    type_names: &HashSet<String>,
+    param_map: &HashMap<String, &TemplateParam>,
+    path: &str,
+    diag: &mut Diagnostics,
+) {
+    if param_map.contains_key(name) {
+        if let Some(param) = param_map.get(name) {
+            if !matches!(param.kind, TemplateParamKind::TypeParam { .. }) {
+                diag.push(
+                    path,
+                    format!("template parameter '{name}' used as a type but declared as integer"),
+                );
+            }
+        }
+        return;
+    }
+    if FORBIDDEN_TYPE_NAMES.contains(&name) {
+        diag.push(
+            path,
+            format!("unbounded type '{name}' is not allowed on the wire"),
+        );
+    } else if name.contains('*')
+        || name.contains('&')
+        || POINTER_PATTERNS.iter().any(|p| name.contains(p))
+    {
+        diag.push(
+            path,
+            format!("pointer or reference type '{name}' is not allowed on the wire"),
+        );
+    } else if looks_like_generic(name) {
+        diag.push(
+            path,
+            format!("unbounded generic type '{name}' is not allowed on the wire"),
+        );
+    } else if (looks_like_primitive(name) && parse_primitive(name).is_none())
+        || !is_valid_identifier(name)
+    {
+        diag.push(path, format!("malformed type '{name}'"));
+    } else if !type_names.contains(name) {
+        diag.push(path, format!("unknown type reference '{name}'"));
+    }
+}
+
+fn validate_array_param_count(
+    param: &str,
+    param_map: &HashMap<String, &TemplateParam>,
+    path: &str,
+    diag: &mut Diagnostics,
+) {
+    if param_map.is_empty() {
+        diag.push(path, format!("malformed array count '{param}'"));
+    } else if let Some(template_param) = param_map.get(param) {
+        if !matches!(template_param.kind, TemplateParamKind::Integer { .. }) {
+            diag.push(
+                path,
+                format!("array size parameter '{param}' must be an integer template parameter"),
+            );
+        }
+    } else {
+        diag.push(
+            path,
+            format!("unknown template parameter '{param}' in array size"),
+        );
     }
 }
 
@@ -446,12 +480,21 @@ fn validate_concrete_instance(
     path: &str,
     diag: &mut Diagnostics,
 ) {
-    let mut provided_integers = HashSet::new();
-    let mut provided_types = HashSet::new();
+    let provided_integers = validate_integer_params(instance, param_map, path, diag);
+    let provided_types = validate_type_params(instance, param_map, path, diag);
+    validate_required_params(param_map, &provided_integers, &provided_types, path, diag);
+}
 
+fn validate_integer_params(
+    instance: &ConcreteInstance,
+    param_map: &HashMap<String, &TemplateParam>,
+    path: &str,
+    diag: &mut Diagnostics,
+) -> HashSet<String> {
+    let mut provided = HashSet::new();
     for (name, value) in &instance.values.integers {
         let param_path = format!("{path}.params.{name}");
-        if !provided_integers.insert(name.clone()) {
+        if !provided.insert(name.clone()) {
             diag.push(
                 &param_path,
                 format!("duplicate parameter value for '{name}'"),
@@ -480,10 +523,19 @@ fn validate_concrete_instance(
             }
         }
     }
+    provided
+}
 
+fn validate_type_params(
+    instance: &ConcreteInstance,
+    param_map: &HashMap<String, &TemplateParam>,
+    path: &str,
+    diag: &mut Diagnostics,
+) -> HashSet<String> {
+    let mut provided = HashSet::new();
     for (name, value) in &instance.values.types {
         let param_path = format!("{path}.params.{name}");
-        if !provided_types.insert(name.clone()) {
+        if !provided.insert(name.clone()) {
             diag.push(
                 &param_path,
                 format!("duplicate parameter value for '{name}'"),
@@ -513,20 +565,23 @@ fn validate_concrete_instance(
             );
         }
     }
+    provided
+}
 
+fn validate_required_params(
+    param_map: &HashMap<String, &TemplateParam>,
+    provided_integers: &HashSet<String>,
+    provided_types: &HashSet<String>,
+    path: &str,
+    diag: &mut Diagnostics,
+) {
     for param in param_map.values() {
         let has_value = match &param.kind {
             TemplateParamKind::Integer { default, .. } => {
-                let provided = instance
-                    .values
-                    .integers
-                    .iter()
-                    .any(|(n, _)| n == &param.name);
-                provided || default.is_some()
+                provided_integers.contains(&param.name) || default.is_some()
             }
             TemplateParamKind::TypeParam { default, .. } => {
-                let provided = instance.values.types.iter().any(|(n, _)| n == &param.name);
-                provided || default.is_some()
+                provided_types.contains(&param.name) || default.is_some()
             }
         };
         if !has_value {

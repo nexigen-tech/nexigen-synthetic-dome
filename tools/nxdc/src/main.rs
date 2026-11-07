@@ -147,7 +147,10 @@ fn find_contracts_dir(component_path: &Path) -> Option<PathBuf> {
 /// Loads every contract YAML in `contracts_dir`, computes the SHA-256 layout
 /// hash for each concrete contract, and fills in missing `layout_hash` values
 /// on `descriptor.ports` by looking up the port's `contract_name`.
-fn fill_port_layout_hashes(descriptor: &mut nxdc::model::ComponentDescriptor, component_path: &Path) {
+fn fill_port_layout_hashes(
+    descriptor: &mut nxdc::model::ComponentDescriptor,
+    component_path: &Path,
+) {
     let contracts_dir = match find_contracts_dir(component_path) {
         Some(d) => d,
         None => return,

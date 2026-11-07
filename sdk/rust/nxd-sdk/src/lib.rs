@@ -8,10 +8,9 @@
 pub use nxd_abi::{
     NxdAbiFingerprint, NxdAbiTable, NxdAbiVersion, NxdArmFn, NxdComponentState, NxdCreateFn,
     NxdDestroyFn, NxdFrameContext, NxdInitializeFn, NxdPortIoBundle, NxdPortSlot, NxdStatus,
-    NxdStepFn, NxdStepIoFn, NxdStopFn,
-    NXD_ERROR_ABI_MISMATCH, NXD_ERROR_ALREADY_INITIALIZED, NXD_ERROR_GENERAL,
-    NXD_ERROR_INVALID_ARGUMENT, NXD_ERROR_NOT_INITIALIZED, NXD_ERROR_NOT_SUPPORTED,
-    NXD_ERROR_OUT_OF_MEMORY, NXD_OK,
+    NxdStepFn, NxdStepIoFn, NxdStopFn, NXD_ERROR_ABI_MISMATCH, NXD_ERROR_ALREADY_INITIALIZED,
+    NXD_ERROR_GENERAL, NXD_ERROR_INVALID_ARGUMENT, NXD_ERROR_NOT_INITIALIZED,
+    NXD_ERROR_NOT_SUPPORTED, NXD_ERROR_OUT_OF_MEMORY, NXD_OK,
 };
 
 use core::ffi::{c_char, c_void};

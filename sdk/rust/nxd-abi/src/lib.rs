@@ -190,7 +190,6 @@ pub struct NxdAbiTable {
     pub step_io: Option<NxdStepIoFn>,
 }
 
-
 impl NxdAbiTable {
     /// Expected table size for ABI-1.  The host rejects plugins whose
     /// `table_size` differs from this value.
@@ -262,6 +261,9 @@ mod tests {
     #[test]
     fn port_io_bundle_is_sized_for_c_layout() {
         assert!(size_of::<NxdPortIoBundle>() > 0);
-        assert_eq!(size_of::<NxdPortIoBundle>() % align_of::<*const c_void>(), 0);
+        assert_eq!(
+            size_of::<NxdPortIoBundle>() % align_of::<*const c_void>(),
+            0
+        );
     }
 }

@@ -341,7 +341,7 @@ fn signal_value_rust_golden() {
 }
 "#;
 
-    let out = run_rust_golden("SignalValueU64", &source, &main);
+    let out = run_rust_golden("SignalValueU64", &source, main);
     assert_eq!(out, "08070605040302010204000000000000");
 }
 

@@ -871,7 +871,12 @@ fn parse_ports(node: &Yaml, diag: &mut Diagnostics) -> Vec<Port> {
         let binding_required = lookup_in_hash(item_hash, "required")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let layout_hash = hash_get_string(item_hash, "layout_hash", &format!("{path}.layout_hash"), diag);
+        let layout_hash = hash_get_string(
+            item_hash,
+            "layout_hash",
+            &format!("{path}.layout_hash"),
+            diag,
+        );
         ports.push(Port {
             name,
             direction,

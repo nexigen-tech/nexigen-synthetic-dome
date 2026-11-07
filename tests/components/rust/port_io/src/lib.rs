@@ -9,8 +9,8 @@
 use core::ffi::c_char;
 use core::slice;
 use nxd_abi::{
-    NxdAbiFingerprint, NxdAbiTable, NxdAbiVersion, NxdComponentState, NxdFrameContext, NxdPortIoBundle,
-    NxdStatus, NXD_ERROR_INVALID_ARGUMENT, NXD_OK,
+    NxdAbiFingerprint, NxdAbiTable, NxdAbiVersion, NxdComponentState, NxdFrameContext,
+    NxdPortIoBundle, NxdStatus, NXD_ERROR_INVALID_ARGUMENT, NXD_OK,
 };
 use nxd_sdk::{status_from, Component, FrameContext};
 
@@ -103,7 +103,11 @@ pub unsafe extern "C" fn nxd_abi_entry() -> *const NxdAbiTable {
     static mut TABLE: NxdAbiTable = unsafe {
         nxd_sdk::build_abi_table_with_step_io(
             [0; 64],
-            NxdAbiVersion { major: 1, minor: 0, patch: 0 },
+            NxdAbiVersion {
+                major: 1,
+                minor: 0,
+                patch: 0,
+            },
             NxdAbiFingerprint::ZERO,
             create,
             destroy,

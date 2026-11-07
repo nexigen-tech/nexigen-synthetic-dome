@@ -16,10 +16,16 @@ use nxd_sdk::{status_from, Component, FrameContext};
 
 mod gen {
     pub mod scenario_state {
-        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/generated/ScenarioState.rs"));
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/generated/ScenarioState.rs"
+        ));
     }
     pub mod scenario_command {
-        include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/generated/ScenarioCommand.rs"));
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/generated/ScenarioCommand.rs"
+        ));
     }
 }
 
@@ -29,15 +35,13 @@ pub use gen::scenario_state::ScenarioState;
 const SCENARIO_STATE_NAME: &str = "scenario/state\0";
 
 const SCENARIO_STATE_LAYOUT_HASH: [u8; 32] = [
-    0x5b, 0x1f, 0xfb, 0xd5, 0x0f, 0x10, 0xca, 0x2b, 0xfe, 0x34, 0xb7, 0xb3, 0x29, 0x85, 0xa1,
-    0xeb, 0xf0, 0x7f, 0x70, 0x5a, 0x20, 0x1a, 0x95, 0x3b, 0x1a, 0x5d, 0xca, 0x4c, 0xa6, 0x4b,
-    0x84, 0x35,
+    0x5b, 0x1f, 0xfb, 0xd5, 0x0f, 0x10, 0xca, 0x2b, 0xfe, 0x34, 0xb7, 0xb3, 0x29, 0x85, 0xa1, 0xeb,
+    0xf0, 0x7f, 0x70, 0x5a, 0x20, 0x1a, 0x95, 0x3b, 0x1a, 0x5d, 0xca, 0x4c, 0xa6, 0x4b, 0x84, 0x35,
 ];
 
 const DESCRIPTOR_HASH: [u8; 32] = [
-    0x43, 0xf4, 0x37, 0x16, 0x8c, 0x2c, 0x1d, 0xc9, 0x19, 0x12, 0xc4, 0x29, 0x06, 0xb2, 0xe4,
-    0x6e, 0x4d, 0x55, 0x91, 0x0d, 0xf8, 0x84, 0x3e, 0xd5, 0x61, 0xcd, 0xb8, 0x83, 0xf3, 0xc6,
-    0xa7, 0x50,
+    0x43, 0xf4, 0x37, 0x16, 0x8c, 0x2c, 0x1d, 0xc9, 0x19, 0x12, 0xc4, 0x29, 0x06, 0xb2, 0xe4, 0x6e,
+    0x4d, 0x55, 0x91, 0x0d, 0xf8, 0x84, 0x3e, 0xd5, 0x61, 0xcd, 0xb8, 0x83, 0xf3, 0xc6, 0xa7, 0x50,
 ];
 
 const COMMANDS_PORT_HASH: u64 = fnv1a_hash(b"commands");
@@ -175,7 +179,10 @@ unsafe extern "C" fn step_io(
         if !bundle.slots.is_null() {
             let slots = slice::from_raw_parts(bundle.slots, bundle.count);
             for slot in slots {
-                if slot.port_name_hash == COMMANDS_PORT_HASH && slot.count > 0 && !slot.data.is_null() {
+                if slot.port_name_hash == COMMANDS_PORT_HASH
+                    && slot.count > 0
+                    && !slot.data.is_null()
+                {
                     let cmd = *(slot.data as *const ScenarioCommand);
                     (*s).apply_command(cmd, frame_no);
                 }
@@ -205,9 +212,7 @@ pub unsafe extern "C" fn nxd_abi_entry() -> *const NxdAbiTable {
                 minor: 0,
                 patch: 0,
             },
-            NxdAbiFingerprint {
-                value: [0; 32],
-            },
+            NxdAbiFingerprint { value: [0; 32] },
             create,
             destroy,
             initialize,
@@ -330,9 +335,10 @@ fn parse_u64(input: &[u8]) -> (u64, &[u8]) {
     let mut value: u64 = 0;
     let mut i = 0;
     while i < input.len() && input[i].is_ascii_digit() {
-        value = value.wrapping_mul(10).wrapping_add((input[i] - b'0') as u64);
+        value = value
+            .wrapping_mul(10)
+            .wrapping_add((input[i] - b'0') as u64);
         i += 1;
     }
     (value, &input[i..])
 }
-

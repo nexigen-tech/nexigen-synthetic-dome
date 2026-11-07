@@ -59,7 +59,7 @@ AttachmentEntry make_sample_attachment_entry() {
 }
 
 int read_and_verify_attachment_index_header(ReaderImpl& reader,
-                                                   std::uint64_t expected_body_size) {
+                                            std::uint64_t expected_body_size) {
     std::uint8_t opcode = 0;
     std::uint64_t body_size = 0;
     if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 1;
@@ -69,7 +69,7 @@ int read_and_verify_attachment_index_header(ReaderImpl& reader,
 }
 
 int read_and_verify_attachment_index_fields(ReaderImpl& reader,
-                                                   const AttachmentEntry& expected) {
+                                            const AttachmentEntry& expected) {
     std::uint64_t file_offset = 0;
     std::uint64_t length = 0;
     std::uint64_t log_time = 0;
@@ -136,7 +136,7 @@ int test_write_attachment_index_group_empty() {
 }
 
 int read_and_verify_statistics_header(ReaderImpl& reader,
-                                             std::uint64_t expected_body_size) {
+                                      std::uint64_t expected_body_size) {
     std::uint8_t opcode = 0;
     std::uint64_t body_size = 0;
     if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 1;
@@ -146,8 +146,8 @@ int read_and_verify_statistics_header(ReaderImpl& reader,
 }
 
 int read_and_verify_statistics_counts(ReaderImpl& reader,
-                                             std::uint64_t expected_message_count,
-                                             std::uint32_t expected_attachment_count) {
+                                      std::uint64_t expected_message_count,
+                                      std::uint32_t expected_attachment_count) {
     Statistics stats{};
     std::uint32_t metadata_count = 0;
     std::uint32_t chunk_count = 0;
@@ -165,8 +165,8 @@ int read_and_verify_statistics_counts(ReaderImpl& reader,
 }
 
 int read_and_verify_statistics_times(ReaderImpl& reader,
-                                            std::uint64_t expected_start_time,
-                                            std::uint64_t expected_end_time) {
+                                     std::uint64_t expected_start_time,
+                                     std::uint64_t expected_end_time) {
     std::uint64_t message_start_time = 0;
     std::uint64_t message_end_time = 0;
     std::uint32_t channel_counts = 0;
@@ -218,9 +218,9 @@ int test_write_statistics() {
 }
 
 int read_and_verify_summary_offset(ReaderImpl& reader,
-                                          std::uint8_t expected_opcode,
-                                          std::uint64_t expected_start,
-                                          std::uint64_t expected_length) {
+                                   std::uint8_t expected_opcode,
+                                   std::uint64_t expected_start,
+                                   std::uint64_t expected_length) {
     std::uint8_t opcode = 0;
     std::uint64_t body_size = 0;
     if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 1;

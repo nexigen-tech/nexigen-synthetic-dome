@@ -612,6 +612,20 @@ add_test(NAME nxd_host_plugin_load
 set_tests_properties(nxd_host_plugin_load PROPERTIES
     DEPENDS "nxd_example_counter_cpp;nxd_test_plugin_bad_abi_version;nxd_test_plugin_bad_table_size;nxd_test_plugin_bad_fingerprint;nxd_test_plugin_bad_descriptor_hash;nxd_test_plugin_bad_missing_fn")
 
+add_executable(nxd_host_descriptor_test tests/host_descriptor_test.cpp)
+target_link_libraries(nxd_host_descriptor_test PRIVATE nxd_host)
+target_include_directories(nxd_host_descriptor_test PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/host/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sdk/rust/nxd-abi")
+target_compile_options(nxd_host_descriptor_test PRIVATE
+    -fno-exceptions
+    -fno-rtti
+    -Wall
+    -Wextra
+    -Werror)
+add_test(NAME nxd_host_descriptor COMMAND nxd_host_descriptor_test)
+
 add_executable(nxd_host_component_lifecycle_test tests/host_component_lifecycle_test.cpp)
 target_link_libraries(nxd_host_component_lifecycle_test PRIVATE nxd_host)
 target_include_directories(nxd_host_component_lifecycle_test PRIVATE

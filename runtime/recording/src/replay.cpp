@@ -56,6 +56,20 @@ struct ChannelState {
     return neg ? -value : value;
 }
 
+void publish_message(const mcap::RecordedMessage& msg,
+                     ChannelState& channel,
+                     std::uint32_t& sequence) noexcept {
+    auto loan = channel.publisher->loan();
+    if (!loan.valid() || loan.data == nullptr || msg.data.size() > channel.element_size) {
+        return;
+    }
+    std::memcpy(loan.data, msg.data.data(), msg.data.size());
+    transport::SampleMetadata meta{};
+    meta.sim_time_ns = static_cast<std::int64_t>(msg.log_time);
+    meta.sequence = sequence++;
+    channel.publisher->publish(meta);
+}
+
 } // namespace
 
 struct ReplaySource::Impl {
@@ -78,6 +92,79 @@ struct ReplaySource::Impl {
     bool loaded = false;
 
     Impl(transport::Transport& t, std::string p) : transport(t), mcap_path(std::move(p)) {}
+
+    [[nodiscard]] std::int64_t compute_limit_time(std::int64_t sim_time_ns) const noexcept {
+        if (base_sim_time_ns == 0) {
+            return first_message_time_ns;
+        }
+        const std::int64_t elapsed_ns = sim_time_ns - base_sim_time_ns;
+        const std::int64_t effective_ns =
+            static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * speed) +
+            elapsed_offset_ns;
+        return first_message_time_ns + effective_ns;
+    }
+
+    void handle_start() noexcept {
+        running = true;
+        paused = false;
+        base_sim_time_ns = 0;
+        elapsed_offset_ns = 0;
+    }
+
+    void handle_pause() noexcept {
+        if (!paused && running) {
+            paused = true;
+            if (base_sim_time_ns != 0) {
+                const std::int64_t elapsed_ns = last_sim_time_ns - base_sim_time_ns;
+                elapsed_offset_ns +=
+                    static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * speed);
+            }
+            base_sim_time_ns = 0;
+        }
+    }
+
+    void handle_resume() noexcept {
+        if (paused) {
+            paused = false;
+            base_sim_time_ns = last_sim_time_ns;
+        }
+    }
+
+    void handle_seek(std::int64_t target_sim_time_ns) noexcept {
+        if (messages.empty()) {
+            return;
+        }
+        auto it = std::lower_bound(
+            messages.begin(), messages.end(), target_sim_time_ns,
+            [](const mcap::RecordedMessage* msg, std::int64_t t) {
+                return static_cast<std::int64_t>(msg->log_time) < t;
+            });
+        next_index = static_cast<std::size_t>(it - messages.begin());
+        elapsed_offset_ns = target_sim_time_ns - first_message_time_ns;
+        base_sim_time_ns = target_sim_time_ns;
+    }
+
+    void handle_set_speed(double new_speed) noexcept {
+        if (new_speed <= 0.0) {
+            return;
+        }
+        if (running && !paused && base_sim_time_ns != 0) {
+            const std::int64_t elapsed_ns = last_sim_time_ns - base_sim_time_ns;
+            elapsed_offset_ns +=
+                static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * speed);
+            base_sim_time_ns = last_sim_time_ns;
+        }
+        speed = new_speed;
+    }
+
+    void handle_set_loop(bool enabled) noexcept {
+        loop_enabled = enabled;
+    }
+
+    void handle_stop() noexcept {
+        running = false;
+        paused = false;
+    }
 };
 
 ReplaySource::ReplaySource(transport::Transport& transport, std::string_view mcap_path) noexcept
@@ -125,62 +212,29 @@ bool ReplaySource::load() noexcept {
 
 void ReplaySource::control(const nxd::contracts::ReplayControl& cmd) noexcept {
     if (impl_ == nullptr) return;
-    switch (static_cast<int>(cmd.command)) {
-    case 1: // Start
-        impl_->running = true;
-        impl_->paused = false;
-        impl_->base_sim_time_ns = 0;
-        impl_->elapsed_offset_ns = 0;
+    using nxd::contracts::Command;
+    switch (cmd.command) {
+    case Command::Start:
+        impl_->handle_start();
         break;
-    case 2: // Pause
-        if (!impl_->paused && impl_->running) {
-            impl_->paused = true;
-            if (impl_->base_sim_time_ns != 0) {
-                const std::int64_t elapsed_ns = impl_->last_sim_time_ns - impl_->base_sim_time_ns;
-                impl_->elapsed_offset_ns +=
-                    static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed);
-            }
-            impl_->base_sim_time_ns = 0;
-        }
+    case Command::Pause:
+        impl_->handle_pause();
         break;
-    case 3: // Resume
-        if (impl_->paused) {
-            impl_->paused = false;
-            impl_->base_sim_time_ns = impl_->last_sim_time_ns;
-        }
+    case Command::Resume:
+        impl_->handle_resume();
         break;
-    case 4: // Seek
-        if (!impl_->messages.empty()) {
-            auto target = cmd.target_sim_time_ns;
-            auto it = std::lower_bound(
-                impl_->messages.begin(), impl_->messages.end(), target,
-                [](const mcap::RecordedMessage* msg, std::int64_t t) {
-                    return static_cast<std::int64_t>(msg->log_time) < t;
-                });
-            impl_->next_index = static_cast<std::size_t>(it - impl_->messages.begin());
-            impl_->elapsed_offset_ns = target - impl_->first_message_time_ns;
-            impl_->base_sim_time_ns = target;
-        }
+    case Command::Seek:
+        impl_->handle_seek(cmd.target_sim_time_ns);
         break;
-    case 5: // SetSpeed
-        if (cmd.speed > 0.0) {
-            if (impl_->running && !impl_->paused && impl_->base_sim_time_ns != 0) {
-                const std::int64_t elapsed_ns =
-                    impl_->last_sim_time_ns - impl_->base_sim_time_ns;
-                impl_->elapsed_offset_ns +=
-                    static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed);
-                impl_->base_sim_time_ns = impl_->last_sim_time_ns;
-            }
-            impl_->speed = cmd.speed;
-        }
+    case Command::SetSpeed:
+        impl_->handle_set_speed(cmd.speed);
         break;
-    case 6: // SetLoop
-        impl_->loop_enabled = cmd.loop_enabled != 0;
+    case Command::SetLoop:
+        impl_->handle_set_loop(cmd.loop_enabled != 0);
         break;
-    case 0: // Stop
+    case Command::Stop:
     default:
-        impl_->running = false;
-        impl_->paused = false;
+        impl_->handle_stop();
         break;
     }
 }
@@ -196,11 +250,7 @@ bool ReplaySource::step(std::int64_t sim_time_ns) noexcept {
         impl_->base_sim_time_ns = sim_time_ns;
     }
 
-    const std::int64_t elapsed_ns = sim_time_ns - impl_->base_sim_time_ns;
-    const std::int64_t effective_ns =
-        static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed) +
-        impl_->elapsed_offset_ns;
-    const std::int64_t limit_time = impl_->first_message_time_ns + effective_ns;
+    const std::int64_t limit_time = impl_->compute_limit_time(sim_time_ns);
 
     while (impl_->next_index < impl_->messages.size()) {
         const auto* msg = impl_->messages[impl_->next_index];
@@ -208,14 +258,7 @@ bool ReplaySource::step(std::int64_t sim_time_ns) noexcept {
 
         auto it = impl_->channels.find(msg->channel_id);
         if (it != impl_->channels.end() && it->second.publisher != nullptr) {
-            auto loan = it->second.publisher->loan();
-            if (loan.valid() && loan.data != nullptr && msg->data.size() <= it->second.element_size) {
-                std::memcpy(loan.data, msg->data.data(), msg->data.size());
-                transport::SampleMetadata meta{};
-                meta.sim_time_ns = static_cast<std::int64_t>(msg->log_time);
-                meta.sequence = impl_->replay_sequence++;
-                it->second.publisher->publish(meta);
-            }
+            publish_message(*msg, it->second, impl_->replay_sequence);
         }
         ++impl_->next_index;
     }

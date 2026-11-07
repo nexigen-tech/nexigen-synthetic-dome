@@ -40,6 +40,69 @@ namespace {
     return out;
 }
 
+[[nodiscard]] std::array<std::uint8_t, 32> table_descriptor_hash(
+    const NxdAbiTable* t) noexcept {
+    std::array<std::uint8_t, 32> h{};
+    std::memcpy(h.data(), t->descriptor_hash.value, sizeof(h));
+    return h;
+}
+
+void close_and_reset(LoadedPlugin& plugin) noexcept {
+    if (plugin.handle != nullptr) {
+        ::dlclose(plugin.handle);
+        plugin.handle = nullptr;
+    }
+    plugin.table = nullptr;
+}
+
+[[nodiscard]] bool open_library(const std::filesystem::path& plugin_path,
+                                LoadedPlugin& plugin) noexcept {
+    plugin.handle = ::dlopen(plugin_path.c_str(), RTLD_NOW | RTLD_LOCAL);
+    return plugin.handle != nullptr;
+}
+
+[[nodiscard]] const NxdAbiTable* load_abi_table(void* handle) noexcept {
+    const auto entry = reinterpret_cast<NxdAbiEntryFn>(::dlsym(handle, "nxd_abi_entry"));
+    if (entry == nullptr) {
+        return nullptr;
+    }
+    return entry();
+}
+
+[[nodiscard]] bool verify_abi_version(const NxdAbiTable* t,
+                                      const ComponentDescriptor& descriptor) noexcept {
+    return t->abi_version.major == descriptor.sdk.abi_major &&
+           t->abi_version.minor >= descriptor.sdk.abi_minor && t->abi_version.major != 0;
+}
+
+[[nodiscard]] bool verify_table_integrity(const NxdAbiTable* t) noexcept {
+    if (t->table_size != sizeof(NxdAbiTable)) {
+        return false;
+    }
+    return fingerprint_equal(t->fingerprint, abi_1_target());
+}
+
+[[nodiscard]] bool verify_component_identity(const NxdAbiTable* t,
+                                             const ComponentDescriptor& descriptor) noexcept {
+    return name_equal(t->component_name, descriptor.name) &&
+           version_equal(t->component_version, descriptor.version);
+}
+
+[[nodiscard]] bool verify_descriptor_hash(const NxdAbiTable* t,
+                                          const std::array<std::uint8_t, 32>& expected_hash) noexcept {
+    return hash_equal(expected_hash, table_descriptor_hash(t));
+}
+
+[[nodiscard]] bool verify_required_functions(const NxdAbiTable* t) noexcept {
+    return t->create != nullptr && t->destroy != nullptr && t->initialize != nullptr &&
+           t->arm != nullptr && t->step != nullptr && t->stop != nullptr;
+}
+
+[[nodiscard]] bool check_hardware_rt(const ComponentDescriptor& descriptor,
+                                     const HostCapabilities& caps) noexcept {
+    return !(descriptor.resources.requires_hardware_rt && !caps.hardware_rt);
+}
+
 } // namespace
 
 nexigen::core::ErrorCode nxd_status_to_error(NxdStatus status) noexcept {
@@ -66,74 +129,46 @@ load_plugin(const std::filesystem::path& plugin_path, const ComponentDescriptor&
     plugin.descriptor = descriptor;
     plugin.expected_descriptor_hash = expected_hash;
 
-    plugin.handle = ::dlopen(plugin_path.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (plugin.handle == nullptr) {
+    if (!open_library(plugin_path, plugin)) {
         return std::unexpected(nexigen::core::ErrorCode::SystemError);
     }
 
-    const auto entry = reinterpret_cast<NxdAbiEntryFn>(::dlsym(plugin.handle, "nxd_abi_entry"));
-    if (entry == nullptr) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    plugin.table = entry();
+    plugin.table = load_abi_table(plugin.handle);
     if (plugin.table == nullptr) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 
     const auto* t = plugin.table;
-    if (t->abi_version.major != descriptor.sdk.abi_major ||
-        t->abi_version.minor < descriptor.sdk.abi_minor || t->abi_version.major == 0) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+    if (!verify_abi_version(t, descriptor)) {
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 
-    if (t->table_size != sizeof(NxdAbiTable)) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+    if (!verify_table_integrity(t)) {
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 
-    if (!fingerprint_equal(t->fingerprint, abi_1_target())) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+    if (!verify_component_identity(t, descriptor)) {
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 
-    if (!name_equal(t->component_name, descriptor.name) ||
-        !version_equal(t->component_version, descriptor.version)) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+    if (!verify_descriptor_hash(t, expected_hash)) {
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 
-    if (!hash_equal(expected_hash, [t]() {
-            std::array<std::uint8_t, 32> h{};
-            std::memcpy(h.data(), t->descriptor_hash.value, sizeof(h));
-            return h;
-        }())) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    if (t->create == nullptr || t->destroy == nullptr || t->initialize == nullptr ||
-        t->arm == nullptr || t->step == nullptr || t->stop == nullptr) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+    if (!verify_required_functions(t)) {
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 
     // step_io is optional; null means the plugin uses the legacy step callback.
 
-    if (descriptor.resources.requires_hardware_rt && !caps.hardware_rt) {
-        ::dlclose(plugin.handle);
-        plugin.handle = nullptr;
+    if (!check_hardware_rt(descriptor, caps)) {
+        close_and_reset(plugin);
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 

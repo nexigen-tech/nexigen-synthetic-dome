@@ -31,6 +31,69 @@ namespace {
     return std::memcmp(a.data(), b.data(), a.size()) == 0;
 }
 
+[[nodiscard]] const PortBinding* find_binding(const std::vector<PortBinding>& bindings,
+                                              std::string_view name) noexcept {
+    for (const auto& binding : bindings) {
+        if (binding.name == name) {
+            return &binding;
+        }
+    }
+    return nullptr;
+}
+
+[[nodiscard]] bool binding_direction_matches(const PortDescriptor& desc_port,
+                                             const PortBinding& binding) noexcept {
+    const bool needs_input = direction_is_input(desc_port.direction);
+    const bool needs_output = direction_is_output(desc_port.direction);
+    const bool provides_input = direction_is_input(binding.direction);
+    const bool provides_output = direction_is_output(binding.direction);
+    return (!needs_input || provides_input) && (!needs_output || provides_output);
+}
+
+[[nodiscard]] bool binding_dimensions_valid(const PortBinding& binding) noexcept {
+    return binding.element_size != 0 && binding.count != 0;
+}
+
+[[nodiscard]] bool binding_layout_hash_matches(const PortDescriptor& desc_port,
+                                               const PortBinding& binding) noexcept {
+    if (!desc_port.layout_hash.has_value() || !binding.layout_hash.has_value()) {
+        return true;
+    }
+    return hash_equal(*desc_port.layout_hash, *binding.layout_hash);
+}
+
+[[nodiscard]] bool validate_descriptor_ports(const std::vector<PortDescriptor>& descriptor_ports,
+                                             const std::vector<PortBinding>& bindings) noexcept {
+    for (const auto& desc_port : descriptor_ports) {
+        const auto* binding = find_binding(bindings, desc_port.name);
+        if (binding == nullptr) {
+            if (desc_port.required) {
+                return false;
+            }
+            continue;
+        }
+        if (!binding_direction_matches(desc_port, *binding) ||
+            !binding_dimensions_valid(*binding) ||
+            !binding_layout_hash_matches(desc_port, *binding)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+[[nodiscard]] bool validate_no_unknown_bindings(const std::vector<PortBinding>& bindings,
+                                                const std::vector<PortDescriptor>& descriptor_ports) noexcept {
+    for (const auto& binding : bindings) {
+        const auto it = std::find_if(
+            descriptor_ports.begin(), descriptor_ports.end(),
+            [&binding](const PortDescriptor& p) { return p.name == binding.name; });
+        if (it == descriptor_ports.end()) {
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 ComponentInstance::ComponentInstance(const LoadedPlugin& plugin) noexcept : plugin_(&plugin) {}
@@ -86,49 +149,14 @@ bool ComponentInstance::validate_port_bindings() noexcept {
         return true;
     }
 
-    for (const auto& desc_port : descriptor.ports) {
-        const auto it = std::find_if(
-            bindings_.begin(), bindings_.end(),
-            [&desc_port](const PortBinding& b) { return b.name == desc_port.name; });
-
-        if (desc_port.required && it == bindings_.end()) {
-            last_status_ = NXD_ERROR_ABI_MISMATCH;
-            return false;
-        }
-        if (it == bindings_.end()) {
-            continue;
-        }
-
-        const bool needs_input = direction_is_input(desc_port.direction);
-        const bool needs_output = direction_is_output(desc_port.direction);
-        const bool provides_input = direction_is_input(it->direction);
-        const bool provides_output = direction_is_output(it->direction);
-        if ((needs_input && !provides_input) || (needs_output && !provides_output)) {
-            last_status_ = NXD_ERROR_ABI_MISMATCH;
-            return false;
-        }
-
-        if (it->element_size == 0 || it->count == 0) {
-            last_status_ = NXD_ERROR_ABI_MISMATCH;
-            return false;
-        }
-
-        if (desc_port.layout_hash.has_value() && it->layout_hash.has_value()) {
-            if (!hash_equal(*desc_port.layout_hash, *it->layout_hash)) {
-                last_status_ = NXD_ERROR_ABI_MISMATCH;
-                return false;
-            }
-        }
+    if (!validate_descriptor_ports(descriptor.ports, bindings_)) {
+        last_status_ = NXD_ERROR_ABI_MISMATCH;
+        return false;
     }
 
-    for (const auto& binding : bindings_) {
-        const auto it = std::find_if(
-            descriptor.ports.begin(), descriptor.ports.end(),
-            [&binding](const PortDescriptor& p) { return p.name == binding.name; });
-        if (it == descriptor.ports.end()) {
-            last_status_ = NXD_ERROR_ABI_MISMATCH;
-            return false;
-        }
+    if (!validate_no_unknown_bindings(bindings_, descriptor.ports)) {
+        last_status_ = NXD_ERROR_ABI_MISMATCH;
+        return false;
     }
 
     if (!bindings_.empty() && plugin_->table->step_io == nullptr) {

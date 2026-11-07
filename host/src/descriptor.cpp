@@ -140,171 +140,221 @@ parse_hex_hash(const std::string& text) noexcept {
     return out;
 }
 
-[[nodiscard]] bool parse_contracts(const nlohmann::json& j,
-                                   std::vector<ContractRef>& out) noexcept {
+[[nodiscard]] bool parse_required_string(const nlohmann::json& obj,
+                                         std::string_view key,
+                                         std::string& out) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end() || !it->is_string()) {
+        return false;
+    }
+    out = it->get<std::string>();
+    return true;
+}
+
+[[nodiscard]] bool parse_required_object(const nlohmann::json& obj,
+                                         std::string_view key,
+                                         const nlohmann::json*& out) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end() || !it->is_object()) {
+        return false;
+    }
+    out = &*it;
+    return true;
+}
+
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_array(const nlohmann::json& j,
+                               std::vector<T>& out,
+                               const ParseFn& parse) noexcept {
     if (!j.is_array()) {
         return false;
     }
     for (const auto& item : j) {
-        if (!item.is_object()) {
+        const auto parsed = parse(item);
+        if (!parsed.has_value()) {
             return false;
         }
-        ContractRef ref;
-        const auto name = item.find("name");
-        if (name == item.end() || !name->is_string()) {
-            return false;
-        }
-        ref.name = name->get<std::string>();
-        const auto version = item.find("version");
-        if (version == item.end() || !parse_version_json(*version, ref.version)) {
-            return false;
-        }
-        const auto hash = item.find("hash");
-        if (hash != item.end()) {
-            if (!hash->is_string()) {
-                return false;
-            }
-            const auto parsed = parse_hex_hash(hash->get<std::string>());
-            if (!parsed) {
-                return false;
-            }
-            ref.hash = *parsed;
-        }
-        out.push_back(std::move(ref));
+        out.push_back(*parsed);
     }
     return true;
+}
+
+[[nodiscard]] std::optional<ContractRef> contract_from_json(
+    const nlohmann::json& item) noexcept {
+    if (!item.is_object()) {
+        return std::nullopt;
+    }
+    ContractRef ref;
+    if (!parse_required_string(item, "name", ref.name)) {
+        return std::nullopt;
+    }
+    const auto version = item.find("version");
+    if (version == item.end() || !parse_version_json(*version, ref.version)) {
+        return std::nullopt;
+    }
+    const auto hash = item.find("hash");
+    if (hash != item.end()) {
+        if (!hash->is_string()) {
+            return std::nullopt;
+        }
+        const auto parsed = parse_hex_hash(hash->get<std::string>());
+        if (!parsed) {
+            return std::nullopt;
+        }
+        ref.hash = *parsed;
+    }
+    return ref;
+}
+
+[[nodiscard]] bool parse_optional_layout_hash(const nlohmann::json& item,
+                                              PortDescriptor& port) noexcept {
+    const auto layout_hash = item.find("layout_hash");
+    const auto contract_hash = item.find("contract_hash");
+    if (layout_hash == item.end() && contract_hash == item.end()) {
+        return true;
+    }
+    const auto& hash_field = (layout_hash != item.end()) ? layout_hash : contract_hash;
+    if (!hash_field->is_string()) {
+        return false;
+    }
+    const auto parsed = parse_hex_hash(hash_field->get<std::string>());
+    if (!parsed) {
+        return false;
+    }
+    port.layout_hash = *parsed;
+    return true;
+}
+
+[[nodiscard]] std::optional<PortDescriptor> port_from_json(
+    const nlohmann::json& item) noexcept {
+    if (!item.is_object()) {
+        return std::nullopt;
+    }
+    PortDescriptor port;
+    if (!parse_required_string(item, "name", port.name)) {
+        return std::nullopt;
+    }
+    const auto direction = item.find("direction");
+    if (direction == item.end() || !direction->is_string() ||
+        !parse_direction(direction->get<std::string>(), port.direction)) {
+        return std::nullopt;
+    }
+    if (!parse_required_string(item, "semantics", port.semantics) ||
+        !parse_required_string(item, "contract", port.contract_name)) {
+        return std::nullopt;
+    }
+    const auto contract_version = item.find("contract_version");
+    if (contract_version == item.end() ||
+        !parse_version_json(*contract_version, port.contract_version)) {
+        return std::nullopt;
+    }
+    if (!parse_optional_layout_hash(item, port)) {
+        return std::nullopt;
+    }
+    const auto required = item.find("required");
+    port.required =
+        (required != item.end() && required->is_boolean() && required->get<bool>());
+    return port;
+}
+
+[[nodiscard]] std::optional<ParameterDescriptor> parameter_from_json(
+    const nlohmann::json& item) noexcept {
+    if (!item.is_object()) {
+        return std::nullopt;
+    }
+    ParameterDescriptor param;
+    if (!parse_required_string(item, "name", param.name) ||
+        !parse_required_string(item, "type", param.type)) {
+        return std::nullopt;
+    }
+    const auto min = item.find("min");
+    if (min != item.end()) {
+        if (!min->is_number_integer() && !min->is_number_unsigned()) {
+            return std::nullopt;
+        }
+        param.min = min->get<std::int64_t>();
+    }
+    const auto max = item.find("max");
+    if (max != item.end()) {
+        if (!max->is_number_integer() && !max->is_number_unsigned()) {
+            return std::nullopt;
+        }
+        param.max = max->get<std::int64_t>();
+    }
+    const auto file = item.find("file");
+    param.file = (file != item.end() && file->is_boolean() && file->get<bool>());
+    const auto required = item.find("required");
+    param.required =
+        (required != item.end() && required->is_boolean() && required->get<bool>());
+    return param;
+}
+
+[[nodiscard]] std::optional<ThreadRoleDescriptor> thread_role_from_json(
+    const nlohmann::json& item) noexcept {
+    if (!item.is_object()) {
+        return std::nullopt;
+    }
+    ThreadRoleDescriptor role;
+    if (!parse_required_string(item, "name", role.name)) {
+        return std::nullopt;
+    }
+    const auto required = item.find("required");
+    role.required =
+        (required != item.end() && required->is_boolean() && required->get<bool>());
+    const auto single_cpu = item.find("single_cpu");
+    role.single_cpu = (single_cpu != item.end() && single_cpu->is_boolean() &&
+                       single_cpu->get<bool>());
+    const auto schedule = item.find("default_schedule");
+    if (schedule != item.end() && schedule->is_string()) {
+        role.default_schedule = schedule->get<std::string>();
+    }
+    return role;
+}
+
+[[nodiscard]] bool parse_metadata(const nlohmann::json& j,
+                                  ComponentDescriptor& desc) noexcept {
+    if (!parse_required_string(j, "name", desc.name)) {
+        return false;
+    }
+    const auto version = j.find("version");
+    return version != j.end() && parse_version_json(*version, desc.version);
+}
+
+[[nodiscard]] bool parse_sdk_version(const nlohmann::json& j,
+                                     ComponentDescriptor& desc) noexcept {
+    const nlohmann::json* sdk_obj = nullptr;
+    if (!parse_required_object(j, "sdk", sdk_obj)) {
+        return false;
+    }
+    const auto abi_major = sdk_obj->find("abi_major");
+    const auto abi_minor = sdk_obj->find("abi_minor");
+    if (abi_major == sdk_obj->end() || !abi_major->is_number_unsigned() ||
+        abi_minor == sdk_obj->end() || !abi_minor->is_number_unsigned()) {
+        return false;
+    }
+    desc.sdk.abi_major = abi_major->get<std::uint64_t>();
+    desc.sdk.abi_minor = abi_minor->get<std::uint64_t>();
+    return true;
+}
+
+[[nodiscard]] bool parse_contracts(const nlohmann::json& j,
+                                   std::vector<ContractRef>& out) noexcept {
+    return parse_array(j, out, contract_from_json);
 }
 
 [[nodiscard]] bool parse_ports(const nlohmann::json& j,
                                std::vector<PortDescriptor>& out) noexcept {
-    if (!j.is_array()) {
-        return false;
-    }
-    for (const auto& item : j) {
-        if (!item.is_object()) {
-            return false;
-        }
-        PortDescriptor port;
-        const auto name = item.find("name");
-        if (name == item.end() || !name->is_string()) {
-            return false;
-        }
-        port.name = name->get<std::string>();
-        const auto direction = item.find("direction");
-        if (direction == item.end() || !direction->is_string()) {
-            return false;
-        }
-        if (!parse_direction(direction->get<std::string>(), port.direction)) {
-            return false;
-        }
-        const auto semantics = item.find("semantics");
-        if (semantics == item.end() || !semantics->is_string()) {
-            return false;
-        }
-        port.semantics = semantics->get<std::string>();
-        const auto contract = item.find("contract");
-        if (contract == item.end() || !contract->is_string()) {
-            return false;
-        }
-        port.contract_name = contract->get<std::string>();
-        const auto contract_version = item.find("contract_version");
-        if (contract_version == item.end() ||
-            !parse_version_json(*contract_version, port.contract_version)) {
-            return false;
-        }
-        const auto layout_hash = item.find("layout_hash");
-        const auto contract_hash = item.find("contract_hash");
-        if (layout_hash != item.end() || contract_hash != item.end()) {
-            const auto& hash_field = (layout_hash != item.end()) ? layout_hash : contract_hash;
-            if (!hash_field->is_string()) {
-                return false;
-            }
-            const auto parsed = parse_hex_hash(hash_field->get<std::string>());
-            if (!parsed) {
-                return false;
-            }
-            port.layout_hash = *parsed;
-        }
-        const auto required = item.find("required");
-        port.required =
-            (required != item.end() && required->is_boolean() && required->get<bool>());
-        out.push_back(std::move(port));
-    }
-    return true;
+    return parse_array(j, out, port_from_json);
 }
 
 [[nodiscard]] bool parse_parameters(const nlohmann::json& j,
                                     std::vector<ParameterDescriptor>& out) noexcept {
-    if (!j.is_array()) {
-        return false;
-    }
-    for (const auto& item : j) {
-        if (!item.is_object()) {
-            return false;
-        }
-        ParameterDescriptor param;
-        const auto name = item.find("name");
-        if (name == item.end() || !name->is_string()) {
-            return false;
-        }
-        param.name = name->get<std::string>();
-        const auto type = item.find("type");
-        if (type == item.end() || !type->is_string()) {
-            return false;
-        }
-        param.type = type->get<std::string>();
-        const auto min = item.find("min");
-        if (min != item.end()) {
-            if (!min->is_number_integer() && !min->is_number_unsigned()) {
-                return false;
-            }
-            param.min = min->get<std::int64_t>();
-        }
-        const auto max = item.find("max");
-        if (max != item.end()) {
-            if (!max->is_number_integer() && !max->is_number_unsigned()) {
-                return false;
-            }
-            param.max = max->get<std::int64_t>();
-        }
-        const auto file = item.find("file");
-        param.file = (file != item.end() && file->is_boolean() && file->get<bool>());
-        const auto required = item.find("required");
-        param.required =
-            (required != item.end() && required->is_boolean() && required->get<bool>());
-        out.push_back(std::move(param));
-    }
-    return true;
+    return parse_array(j, out, parameter_from_json);
 }
 
 [[nodiscard]] bool parse_thread_roles(const nlohmann::json& j,
                                       std::vector<ThreadRoleDescriptor>& out) noexcept {
-    if (!j.is_array()) {
-        return false;
-    }
-    for (const auto& item : j) {
-        if (!item.is_object()) {
-            return false;
-        }
-        ThreadRoleDescriptor role;
-        const auto name = item.find("name");
-        if (name == item.end() || !name->is_string()) {
-            return false;
-        }
-        role.name = name->get<std::string>();
-        const auto required = item.find("required");
-        role.required =
-            (required != item.end() && required->is_boolean() && required->get<bool>());
-        const auto single_cpu = item.find("single_cpu");
-        role.single_cpu = (single_cpu != item.end() && single_cpu->is_boolean() &&
-                           single_cpu->get<bool>());
-        const auto schedule = item.find("default_schedule");
-        if (schedule != item.end() && schedule->is_string()) {
-            role.default_schedule = schedule->get<std::string>();
-        }
-        out.push_back(std::move(role));
-    }
-    return true;
+    return parse_array(j, out, thread_role_from_json);
 }
 
 [[nodiscard]] bool parse_resources(const nlohmann::json& j,
@@ -344,6 +394,17 @@ parse_hex_hash(const std::string& text) noexcept {
     return true;
 }
 
+[[nodiscard]] bool parse_required_section(const nlohmann::json& obj,
+                                          std::string_view key,
+                                          auto& out,
+                                          const auto& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end() || !parse(*it, out)) {
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 nexigen::core::Result<ComponentDescriptor>
@@ -359,57 +420,14 @@ load_component_descriptor(const std::filesystem::path& path) noexcept {
     }
 
     ComponentDescriptor desc;
-    const auto name = j.find("name");
-    if (name == j.end() || !name->is_string()) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-    desc.name = name->get<std::string>();
-
-    const auto version = j.find("version");
-    if (version == j.end() || !parse_version_json(*version, desc.version)) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    const auto sdk = j.find("sdk");
-    if (sdk == j.end() || !sdk->is_object()) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-    const auto abi_major = sdk->find("abi_major");
-    const auto abi_minor = sdk->find("abi_minor");
-    if (abi_major == sdk->end() || !abi_major->is_number_unsigned() ||
-        abi_minor == sdk->end() || !abi_minor->is_number_unsigned()) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-    desc.sdk.abi_major = abi_major->get<std::uint64_t>();
-    desc.sdk.abi_minor = abi_minor->get<std::uint64_t>();
-
-    const auto contracts = j.find("contracts");
-    if (contracts == j.end() || !parse_contracts(*contracts, desc.contracts)) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    const auto ports = j.find("ports");
-    if (ports == j.end() || !parse_ports(*ports, desc.ports)) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    const auto parameters = j.find("parameters");
-    if (parameters == j.end() || !parse_parameters(*parameters, desc.parameters)) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    const auto thread_roles = j.find("thread_roles");
-    if (thread_roles == j.end() || !parse_thread_roles(*thread_roles, desc.thread_roles)) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    const auto resources = j.find("resources");
-    if (resources == j.end() || !parse_resources(*resources, desc.resources)) {
-        return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
-    }
-
-    const auto modes = j.find("supported_modes");
-    if (modes == j.end() || !parse_supported_modes(*modes, desc.supported_modes)) {
+    if (!parse_metadata(j, desc) ||
+        !parse_sdk_version(j, desc) ||
+        !parse_required_section(j, "contracts", desc.contracts, parse_contracts) ||
+        !parse_required_section(j, "ports", desc.ports, parse_ports) ||
+        !parse_required_section(j, "parameters", desc.parameters, parse_parameters) ||
+        !parse_required_section(j, "thread_roles", desc.thread_roles, parse_thread_roles) ||
+        !parse_required_section(j, "resources", desc.resources, parse_resources) ||
+        !parse_required_section(j, "supported_modes", desc.supported_modes, parse_supported_modes)) {
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
 

@@ -59,15 +59,14 @@ class LetDeadlineTracker final {
 
     /// Clears all declarations and recorded violations.
     void reset() noexcept;
-
   private:
     std::vector<LetBoundary> boundaries_;
     std::vector<LetViolation> violations_;
 
     [[nodiscard]] const LetBoundary* find_boundary(const std::string& source_instance,
-                                                  const std::string& source_port,
-                                                  const std::string& target_instance,
-                                                  const std::string& target_port) const noexcept;
+                                                   const std::string& source_port,
+                                                   const std::string& target_instance,
+                                                   const std::string& target_port) const noexcept;
 };
 
 } // namespace nxd::runtime::chronos

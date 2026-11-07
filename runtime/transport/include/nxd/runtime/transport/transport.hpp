@@ -80,18 +80,18 @@ class Transport {
     /// pre-allocated with room for one sample of `element_size * max_count`
     /// bytes.
     [[nodiscard]] virtual Publisher* create_publisher(std::string_view source_name,
-                                                       std::size_t element_size,
-                                                       std::size_t max_count,
-                                                       const std::array<std::uint8_t, 32>&
-                                                           layout_hash) noexcept = 0;
+                                                      std::size_t element_size,
+                                                      std::size_t max_count,
+                                                      const std::array<std::uint8_t, 32>&
+                                                          layout_hash) noexcept = 0;
 
     /// Create or reuse a subscriber for `source_name`.  The subscriber keeps a
     /// local copy of the last sample.
     [[nodiscard]] virtual Subscriber* create_subscriber(std::string_view source_name,
-                                                         std::size_t element_size,
-                                                         std::size_t max_count,
-                                                         const std::array<std::uint8_t, 32>&
-                                                             layout_hash) noexcept = 0;
+                                                        std::size_t element_size,
+                                                        std::size_t max_count,
+                                                        const std::array<std::uint8_t, 32>&
+                                                            layout_hash) noexcept = 0;
 };
 
 } // namespace nxd::runtime::transport

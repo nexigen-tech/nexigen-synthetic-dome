@@ -84,7 +84,6 @@ class Writer {
     [[nodiscard]] bool add_attachment(const Attachment& attachment) noexcept;
 
     [[nodiscard]] bool close() noexcept;
-
   private:
     struct Impl;
     Impl* impl_ = nullptr;
@@ -106,7 +105,6 @@ class Reader {
     [[nodiscard]] const std::vector<Attachment>& attachments() const noexcept;
     [[nodiscard]] const std::vector<RecordedMessage>& messages() const noexcept;
     [[nodiscard]] std::optional<Statistics> statistics() const noexcept;
-
   private:
     struct Impl;
     Impl* impl_ = nullptr;

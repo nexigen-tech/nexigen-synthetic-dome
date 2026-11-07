@@ -955,3 +955,59 @@ add_test(NAME nxd_host_empty_benchmark
 set_tests_properties(nxd_host_empty_benchmark PROPERTIES
     DEPENDS "nxd_example_empty_cpp;nxd_component_descriptors")
 
+# -----------------------------------------------------------------------------
+# clang-format and clang-tidy tooling targets
+# -----------------------------------------------------------------------------
+find_program(NXD_CLANG_FORMAT_EXE NAMES clang-format clang-format-19 clang-format-18 clang-format-17)
+find_program(NXD_CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-19 clang-tidy-18 clang-tidy-17)
+
+if(NXD_CLANG_FORMAT_EXE)
+    file(GLOB_RECURSE NXD_FORMAT_SOURCES
+        CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/*.[ch]pp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/host/*.[ch]pp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/runtime/*.[ch]pp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/*.[ch]pp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/cpp/*.[ch]pp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.[ch]pp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/*.[ch]pp")
+    list(FILTER NXD_FORMAT_SOURCES EXCLUDE REGEX
+        "(${CMAKE_CURRENT_BINARY_DIR}|/_deps/|/generated/|/target/)")
+
+    add_custom_target(nxd_clang_format
+        COMMAND ${NXD_CLANG_FORMAT_EXE} --dry-run --Werror ${NXD_FORMAT_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Checking C++ formatting with clang-format"
+        VERBATIM)
+
+    add_custom_target(nxd_clang_format_apply
+        COMMAND ${NXD_CLANG_FORMAT_EXE} -i ${NXD_FORMAT_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Applying clang-format to C++ sources"
+        VERBATIM)
+endif()
+
+if(NXD_CLANG_TIDY_EXE)
+    file(GLOB_RECURSE NXD_TIDY_SOURCES
+        CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/host/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/runtime/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/sdk/cpp/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/examples/components/cpp/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tools/*.cpp")
+    list(FILTER NXD_TIDY_SOURCES EXCLUDE REGEX
+        "(${CMAKE_CURRENT_BINARY_DIR}|/_deps/|/generated/|/target/)")
+
+    add_custom_target(nxd_clang_tidy
+        COMMAND ${NXD_CLANG_TIDY_EXE}
+            -p ${CMAKE_BINARY_DIR}
+            --quiet
+            --extra-arg=-Wno-unknown-warning-option
+            ${NXD_TIDY_SOURCES}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Running clang-tidy"
+        VERBATIM)
+endif()
+

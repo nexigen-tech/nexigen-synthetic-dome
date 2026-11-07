@@ -5,7 +5,7 @@ namespace nxd::runtime::composer {
 DomePlan emit_plan(
     const SystemManifest& manifest,
     const std::unordered_map<std::string, nxd::host::ComponentDescriptor>&
-        /*descriptors*/) noexcept {
+    /*descriptors*/) noexcept {
     DomePlan plan;
     plan.version_major = dome_plan_version_major;
     plan.version_minor = dome_plan_version_minor;

@@ -34,7 +34,6 @@ class HeadlessPublisher final : public Publisher {
         channel_->last_metadata = metadata;
         channel_->published = true;
     }
-
   private:
     Channel* channel_ = nullptr;
 };
@@ -54,7 +53,6 @@ class HeadlessSubscriber final : public Subscriber {
         view.metadata = channel_->last_metadata;
         return view;
     }
-
   private:
     Channel* channel_ = nullptr;
 };
@@ -72,10 +70,10 @@ HeadlessTransport::HeadlessTransport() noexcept : impl_(std::make_unique<Impl>()
 HeadlessTransport::~HeadlessTransport() = default;
 
 Publisher* HeadlessTransport::create_publisher(std::string_view source_name,
-                                                std::size_t element_size,
-                                                std::size_t max_count,
-                                                const std::array<std::uint8_t, 32>&
-                                                    layout_hash) noexcept {
+                                               std::size_t element_size,
+                                               std::size_t max_count,
+                                               const std::array<std::uint8_t, 32>&
+                                                   layout_hash) noexcept {
     auto it = impl_->channels.find(std::string(source_name));
     if (it == impl_->channels.end()) {
         auto channel = std::make_unique<Channel>();
@@ -93,10 +91,10 @@ Publisher* HeadlessTransport::create_publisher(std::string_view source_name,
 }
 
 Subscriber* HeadlessTransport::create_subscriber(std::string_view source_name,
-                                                  std::size_t element_size,
-                                                  std::size_t max_count,
-                                                  const std::array<std::uint8_t, 32>&
-                                                      layout_hash) noexcept {
+                                                 std::size_t element_size,
+                                                 std::size_t max_count,
+                                                 const std::array<std::uint8_t, 32>&
+                                                     layout_hash) noexcept {
     (void)element_size;
     (void)max_count;
     (void)layout_hash;

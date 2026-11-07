@@ -8,7 +8,7 @@ namespace nxd::runtime::chronos {
 Runtime::Runtime(Config cfg) noexcept : cfg_(cfg) {}
 
 nexigen::core::Result<Partition*> Runtime::register_partition(std::uint32_t id,
-                                                               std::string name) noexcept {
+                                                              std::string name) noexcept {
     if (state_.load(std::memory_order_acquire) != State::Initialized) {
         return std::unexpected(nexigen::core::ErrorCode::InvalidArgument);
     }
@@ -61,8 +61,8 @@ nexigen::core::Status Runtime::play() noexcept {
 
     State expected = current;
     if (!state_.compare_exchange_strong(expected, State::Playing,
-                                         std::memory_order_acq_rel,
-                                         std::memory_order_acquire)) {
+                                        std::memory_order_acq_rel,
+                                        std::memory_order_acquire)) {
         return std::unexpected(nexigen::core::ErrorCode::Conflict);
     }
     return {};
@@ -79,8 +79,8 @@ nexigen::core::Status Runtime::pause() noexcept {
 nexigen::core::Status Runtime::step() noexcept {
     State expected = State::Armed;
     if (!state_.compare_exchange_strong(expected, State::Stepping,
-                                         std::memory_order_acq_rel,
-                                         std::memory_order_acquire)) {
+                                        std::memory_order_acq_rel,
+                                        std::memory_order_acquire)) {
         return std::unexpected(nexigen::core::ErrorCode::Conflict);
     }
 
@@ -90,22 +90,22 @@ nexigen::core::Status Runtime::step() noexcept {
     sim_time_ = sim_time_ + duration_ns(cfg_.base_frame_interval_ns);
 
     switch (cfg_.mode) {
-        case Mode::RealTimeHil:
-            wall_time_ = wall_time_ + duration_ns(cfg_.base_frame_interval_ns);
-            hw_fpga_time_ = hw_fpga_time_ + duration_ns(cfg_.base_frame_interval_ns);
-            break;
-        case Mode::ScaledSil: {
-            const std::int64_t wall_step = cfg_.base_frame_interval_ns / cfg_.scale_factor;
-            wall_time_ = wall_time_ + duration_ns(wall_step);
-            break;
-        }
-        case Mode::FreeSil:
-            // Free SIL advances logical time as fast as possible; wall time is
-            // not a pacing target in this test path.
-            break;
-        case Mode::Step:
-            wall_time_ = wall_time_ + duration_ns(cfg_.base_frame_interval_ns);
-            break;
+    case Mode::RealTimeHil:
+        wall_time_ = wall_time_ + duration_ns(cfg_.base_frame_interval_ns);
+        hw_fpga_time_ = hw_fpga_time_ + duration_ns(cfg_.base_frame_interval_ns);
+        break;
+    case Mode::ScaledSil: {
+        const std::int64_t wall_step = cfg_.base_frame_interval_ns / cfg_.scale_factor;
+        wall_time_ = wall_time_ + duration_ns(wall_step);
+        break;
+    }
+    case Mode::FreeSil:
+        // Free SIL advances logical time as fast as possible; wall time is
+        // not a pacing target in this test path.
+        break;
+    case Mode::Step:
+        wall_time_ = wall_time_ + duration_ns(cfg_.base_frame_interval_ns);
+        break;
     }
 
     publish_current_frame_context();
@@ -139,8 +139,8 @@ nexigen::core::Status Runtime::stop() noexcept {
 
     State expected = current;
     if (!state_.compare_exchange_strong(expected, State::Stopped,
-                                         std::memory_order_acq_rel,
-                                         std::memory_order_acquire)) {
+                                        std::memory_order_acq_rel,
+                                        std::memory_order_acquire)) {
         return std::unexpected(nexigen::core::ErrorCode::Conflict);
     }
     return {};
@@ -182,8 +182,8 @@ Runtime::try_transition(State expected, State next) noexcept {
     }
 
     if (!state_.compare_exchange_strong(current, next,
-                                         std::memory_order_acq_rel,
-                                         std::memory_order_acquire)) {
+                                        std::memory_order_acq_rel,
+                                        std::memory_order_acquire)) {
         return std::unexpected(nexigen::core::ErrorCode::Conflict);
     }
     return {};
@@ -205,12 +205,12 @@ bool Runtime::is_valid(const Config& cfg) noexcept {
 
 nexigen::core::ErrorCode to_error_code(Error err) noexcept {
     switch (err) {
-        case Error::None:
-            return nexigen::core::ErrorCode::Ok;
-        case Error::InvalidState:
-        case Error::InvalidMode:
-        case Error::InvalidConfiguration:
-            return nexigen::core::ErrorCode::InvalidArgument;
+    case Error::None:
+        return nexigen::core::ErrorCode::Ok;
+    case Error::InvalidState:
+    case Error::InvalidMode:
+    case Error::InvalidConfiguration:
+        return nexigen::core::ErrorCode::InvalidArgument;
     }
     return nexigen::core::ErrorCode::InvalidArgument;
 }

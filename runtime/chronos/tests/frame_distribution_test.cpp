@@ -41,7 +41,7 @@ int main() {
 
     for (int i = 0; i < 3; ++i) {
         if (!ok(rt.step())) return 10 + i;
-        if (rt.frame_no() != static_cast<std::uint64_t>(i + 1)) return 20 + i;
+        if (rt.frame_no() != static_cast<std::uint64_t>(i) + 1) return 20 + i;
         if (rt.sim_time().ns != (i + 1) * base_ns) return 30 + i;
     }
 

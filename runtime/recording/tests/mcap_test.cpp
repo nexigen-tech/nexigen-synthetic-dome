@@ -38,7 +38,7 @@ int main() {
             mcap::Message msg{};
             msg.channel_id = 1;
             msg.sequence = static_cast<std::uint32_t>(i);
-            msg.log_time = static_cast<std::uint64_t>((i + 1) * 1000);
+            msg.log_time = static_cast<std::uint64_t>(i + 1) * 1000;
             msg.publish_time = msg.log_time;
             msg.data = reinterpret_cast<const std::byte*>(&sample);
             msg.data_size = sizeof(sample);
@@ -52,7 +52,7 @@ int main() {
         attachment.create_time = 5000;
         const char* meta = "meta";
         attachment.data.assign(reinterpret_cast<const std::byte*>(meta),
-                                reinterpret_cast<const std::byte*>(meta) + 4);
+                               reinterpret_cast<const std::byte*>(meta) + 4);
         if (!writer.add_attachment(attachment)) return 5;
 
         if (!writer.close()) return 6;

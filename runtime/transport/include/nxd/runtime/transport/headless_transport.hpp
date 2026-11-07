@@ -24,16 +24,15 @@ class HeadlessTransport final : public Transport {
     HeadlessTransport& operator=(HeadlessTransport&&) = delete;
 
     [[nodiscard]] Publisher* create_publisher(std::string_view source_name,
-                                               std::size_t element_size,
-                                               std::size_t max_count,
-                                               const std::array<std::uint8_t, 32>&
-                                                   layout_hash) noexcept override;
+                                              std::size_t element_size,
+                                              std::size_t max_count,
+                                              const std::array<std::uint8_t, 32>&
+                                                  layout_hash) noexcept override;
     [[nodiscard]] Subscriber* create_subscriber(std::string_view source_name,
-                                                 std::size_t element_size,
-                                                 std::size_t max_count,
-                                                 const std::array<std::uint8_t, 32>&
-                                                     layout_hash) noexcept override;
-
+                                                std::size_t element_size,
+                                                std::size_t max_count,
+                                                const std::array<std::uint8_t, 32>&
+                                                    layout_hash) noexcept override;
   private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

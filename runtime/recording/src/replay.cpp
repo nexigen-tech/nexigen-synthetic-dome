@@ -21,7 +21,7 @@ struct ChannelState {
 };
 
 [[nodiscard]] bool hex_string_to_hash(std::string_view hex,
-                                       std::array<std::uint8_t, 32>& out) noexcept {
+                                      std::array<std::uint8_t, 32>& out) noexcept {
     out = {};
     if (hex.size() != 64) {
         return false;
@@ -126,62 +126,62 @@ bool ReplaySource::load() noexcept {
 void ReplaySource::control(const nxd::contracts::ReplayControl& cmd) noexcept {
     if (impl_ == nullptr) return;
     switch (static_cast<int>(cmd.command)) {
-        case 1: // Start
-            impl_->running = true;
-            impl_->paused = false;
-            impl_->base_sim_time_ns = 0;
-            impl_->elapsed_offset_ns = 0;
-            break;
-        case 2: // Pause
-            if (!impl_->paused && impl_->running) {
-                impl_->paused = true;
-                if (impl_->base_sim_time_ns != 0) {
-                    const std::int64_t elapsed_ns = impl_->last_sim_time_ns - impl_->base_sim_time_ns;
-                    impl_->elapsed_offset_ns +=
-                        static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed);
-                }
-                impl_->base_sim_time_ns = 0;
+    case 1: // Start
+        impl_->running = true;
+        impl_->paused = false;
+        impl_->base_sim_time_ns = 0;
+        impl_->elapsed_offset_ns = 0;
+        break;
+    case 2: // Pause
+        if (!impl_->paused && impl_->running) {
+            impl_->paused = true;
+            if (impl_->base_sim_time_ns != 0) {
+                const std::int64_t elapsed_ns = impl_->last_sim_time_ns - impl_->base_sim_time_ns;
+                impl_->elapsed_offset_ns +=
+                    static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed);
             }
-            break;
-        case 3: // Resume
-            if (impl_->paused) {
-                impl_->paused = false;
+            impl_->base_sim_time_ns = 0;
+        }
+        break;
+    case 3: // Resume
+        if (impl_->paused) {
+            impl_->paused = false;
+            impl_->base_sim_time_ns = impl_->last_sim_time_ns;
+        }
+        break;
+    case 4: // Seek
+        if (!impl_->messages.empty()) {
+            auto target = cmd.target_sim_time_ns;
+            auto it = std::lower_bound(
+                impl_->messages.begin(), impl_->messages.end(), target,
+                [](const mcap::RecordedMessage* msg, std::int64_t t) {
+                    return static_cast<std::int64_t>(msg->log_time) < t;
+                });
+            impl_->next_index = static_cast<std::size_t>(it - impl_->messages.begin());
+            impl_->elapsed_offset_ns = target - impl_->first_message_time_ns;
+            impl_->base_sim_time_ns = target;
+        }
+        break;
+    case 5: // SetSpeed
+        if (cmd.speed > 0.0) {
+            if (impl_->running && !impl_->paused && impl_->base_sim_time_ns != 0) {
+                const std::int64_t elapsed_ns =
+                    impl_->last_sim_time_ns - impl_->base_sim_time_ns;
+                impl_->elapsed_offset_ns +=
+                    static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed);
                 impl_->base_sim_time_ns = impl_->last_sim_time_ns;
             }
-            break;
-        case 4: // Seek
-            if (!impl_->messages.empty()) {
-                auto target = cmd.target_sim_time_ns;
-                auto it = std::lower_bound(
-                    impl_->messages.begin(), impl_->messages.end(), target,
-                    [](const mcap::RecordedMessage* msg, std::int64_t t) {
-                        return static_cast<std::int64_t>(msg->log_time) < t;
-                    });
-                impl_->next_index = static_cast<std::size_t>(it - impl_->messages.begin());
-                impl_->elapsed_offset_ns = target - impl_->first_message_time_ns;
-                impl_->base_sim_time_ns = target;
-            }
-            break;
-        case 5: // SetSpeed
-            if (cmd.speed > 0.0) {
-                if (impl_->running && !impl_->paused && impl_->base_sim_time_ns != 0) {
-                    const std::int64_t elapsed_ns =
-                        impl_->last_sim_time_ns - impl_->base_sim_time_ns;
-                    impl_->elapsed_offset_ns +=
-                        static_cast<std::int64_t>(static_cast<double>(elapsed_ns) * impl_->speed);
-                    impl_->base_sim_time_ns = impl_->last_sim_time_ns;
-                }
-                impl_->speed = cmd.speed;
-            }
-            break;
-        case 6: // SetLoop
-            impl_->loop_enabled = cmd.loop_enabled != 0;
-            break;
-        case 0: // Stop
-        default:
-            impl_->running = false;
-            impl_->paused = false;
-            break;
+            impl_->speed = cmd.speed;
+        }
+        break;
+    case 6: // SetLoop
+        impl_->loop_enabled = cmd.loop_enabled != 0;
+        break;
+    case 0: // Stop
+    default:
+        impl_->running = false;
+        impl_->paused = false;
+        break;
     }
 }
 

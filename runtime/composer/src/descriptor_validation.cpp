@@ -41,16 +41,16 @@ namespace {
 
 [[nodiscard]] std::string mode_to_string(std::uint8_t mode) noexcept {
     switch (mode) {
-        case 0:
-            return "realtime_hil";
-        case 1:
-            return "scaled_sil";
-        case 2:
-            return "free_sil";
-        case 3:
-            return "step";
-        default:
-            return "unknown";
+    case 0:
+        return "realtime_hil";
+    case 1:
+        return "scaled_sil";
+    case 2:
+        return "free_sil";
+    case 3:
+        return "step";
+    default:
+        return "unknown";
     }
 }
 
@@ -86,8 +86,8 @@ find_port(const nxd::host::ComponentDescriptor& descriptor,
 }
 
 [[nodiscard]] bool port_is_wired(const SystemManifest& manifest,
-                                   const Instance& instance,
-                                   const nxd::host::PortDescriptor& port) noexcept {
+                                 const Instance& instance,
+                                 const nxd::host::PortDescriptor& port) noexcept {
     for (const auto& wire : manifest.wires) {
         if (port.direction == nxd::host::PortDescriptor::Direction::In) {
             if (wire.target_instance == instance.id && wire.target_port == port.name) {
@@ -316,10 +316,10 @@ void validate_instance(const SystemManifest& manifest,
 }
 
 void validate_wire(const SystemManifest& manifest,
-                       const ManifestWire& wire,
-                       const std::unordered_map<std::string, nxd::host::ComponentDescriptor>&
-                           descriptors,
-                       std::vector<ValidationDiagnostic>& diagnostics) noexcept {
+                   const ManifestWire& wire,
+                   const std::unordered_map<std::string, nxd::host::ComponentDescriptor>&
+                       descriptors,
+                   std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     const auto source_instance = std::ranges::find(
         manifest.instances, wire.source_instance, &Instance::id);
     const auto target_instance = std::ranges::find(
@@ -422,7 +422,7 @@ void validate_wire(const SystemManifest& manifest,
 
 nexigen::core::Result<std::unordered_map<std::string, nxd::host::ComponentDescriptor>>
 load_component_descriptors(const SystemManifest& manifest,
-                          const std::filesystem::path& base_path) noexcept {
+                           const std::filesystem::path& base_path) noexcept {
     std::unordered_map<std::string, nxd::host::ComponentDescriptor> descriptors;
     for (const auto& ref : manifest.components) {
         const auto path = base_path / ref.path;

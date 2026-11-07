@@ -88,7 +88,8 @@ int main(int argc, char** argv) {
 
     const int rc = pclose(pipe);
     if (rc != 0) {
-        std::cerr << "viewer exited with code " << rc << "\n" << output << "\n";
+        std::cerr << "viewer exited with code " << rc << "\n"
+                  << output << "\n";
         return 4;
     }
 
@@ -113,7 +114,8 @@ int main(int argc, char** argv) {
     }
 
     if (!found) {
-        std::cerr << "latency report not found in viewer output:\n" << output << "\n";
+        std::cerr << "latency report not found in viewer output:\n"
+                  << output << "\n";
         return 5;
     }
 

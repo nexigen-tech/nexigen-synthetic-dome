@@ -27,10 +27,10 @@ constexpr std::size_t kScheduleCapacity = 16;
 constexpr std::size_t kBatchCapacity = 16; // RawCanBatchClassical::frames
 
 struct ScheduledFrame {
-    std::int64_t sim_time_ns;
-    std::uint32_t can_id;
-    Kind kind;
-    std::uint8_t dlc;
+    std::int64_t sim_time_ns = 0;
+    std::uint32_t can_id = 0;
+    Kind kind = Kind::Data;
+    std::uint8_t dlc = 0;
     std::array<std::uint8_t, 8> payload{};
 };
 

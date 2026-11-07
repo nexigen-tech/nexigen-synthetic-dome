@@ -14,18 +14,18 @@ namespace {
 chronos::Config to_cpp_config(const NxdChronosConfig* config) noexcept {
     chronos::Config cfg{};
     switch (config->mode) {
-        case NXD_CHRONOS_MODE_REALTIME_HIL:
-            cfg.mode = chronos::Mode::RealTimeHil;
-            break;
-        case NXD_CHRONOS_MODE_SCALED_SIL:
-            cfg.mode = chronos::Mode::ScaledSil;
-            break;
-        case NXD_CHRONOS_MODE_FREE_SIL:
-            cfg.mode = chronos::Mode::FreeSil;
-            break;
-        default:
-            cfg.mode = chronos::Mode::Step;
-            break;
+    case NXD_CHRONOS_MODE_REALTIME_HIL:
+        cfg.mode = chronos::Mode::RealTimeHil;
+        break;
+    case NXD_CHRONOS_MODE_SCALED_SIL:
+        cfg.mode = chronos::Mode::ScaledSil;
+        break;
+    case NXD_CHRONOS_MODE_FREE_SIL:
+        cfg.mode = chronos::Mode::FreeSil;
+        break;
+    default:
+        cfg.mode = chronos::Mode::Step;
+        break;
     }
     cfg.base_frame_interval_ns = config->base_frame_interval_ns;
     cfg.scale_factor = config->scale_factor;
@@ -34,22 +34,22 @@ chronos::Config to_cpp_config(const NxdChronosConfig* config) noexcept {
 
 NxdChronosState to_c_state(chronos::State state) noexcept {
     switch (state) {
-        case chronos::State::Uninitialized:
-            return NXD_CHRONOS_STATE_UNINITIALIZED;
-        case chronos::State::Initialized:
-            return NXD_CHRONOS_STATE_INITIALIZED;
-        case chronos::State::Armed:
-            return NXD_CHRONOS_STATE_ARMED;
-        case chronos::State::Playing:
-            return NXD_CHRONOS_STATE_PLAYING;
-        case chronos::State::Paused:
-            return NXD_CHRONOS_STATE_PAUSED;
-        case chronos::State::Stepping:
-            return NXD_CHRONOS_STATE_STEPPING;
-        case chronos::State::Stopped:
-            return NXD_CHRONOS_STATE_STOPPED;
-        case chronos::State::Disposed:
-            return NXD_CHRONOS_STATE_DISPOSED;
+    case chronos::State::Uninitialized:
+        return NXD_CHRONOS_STATE_UNINITIALIZED;
+    case chronos::State::Initialized:
+        return NXD_CHRONOS_STATE_INITIALIZED;
+    case chronos::State::Armed:
+        return NXD_CHRONOS_STATE_ARMED;
+    case chronos::State::Playing:
+        return NXD_CHRONOS_STATE_PLAYING;
+    case chronos::State::Paused:
+        return NXD_CHRONOS_STATE_PAUSED;
+    case chronos::State::Stepping:
+        return NXD_CHRONOS_STATE_STEPPING;
+    case chronos::State::Stopped:
+        return NXD_CHRONOS_STATE_STOPPED;
+    case chronos::State::Disposed:
+        return NXD_CHRONOS_STATE_DISPOSED;
     }
     return NXD_CHRONOS_STATE_UNINITIALIZED;
 }
@@ -59,12 +59,12 @@ NxdChronosStatus to_c_status(const nexigen::core::Status& status) noexcept {
         return NXD_CHRONOS_OK;
     }
     switch (status.error()) {
-        case nexigen::core::ErrorCode::InvalidArgument:
-            return NXD_CHRONOS_ERROR_INVALID_ARGUMENT;
-        case nexigen::core::ErrorCode::Conflict:
-            return NXD_CHRONOS_ERROR_INVALID_STATE;
-        default:
-            return NXD_CHRONOS_ERROR_INVALID_ARGUMENT;
+    case nexigen::core::ErrorCode::InvalidArgument:
+        return NXD_CHRONOS_ERROR_INVALID_ARGUMENT;
+    case nexigen::core::ErrorCode::Conflict:
+        return NXD_CHRONOS_ERROR_INVALID_STATE;
+    default:
+        return NXD_CHRONOS_ERROR_INVALID_ARGUMENT;
     }
 }
 

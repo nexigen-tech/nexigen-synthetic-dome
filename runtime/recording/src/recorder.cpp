@@ -97,13 +97,13 @@ Recorder::~Recorder() {
 }
 
 bool Recorder::register_topic(std::string_view source_name,
-                               std::size_t element_size,
-                               std::size_t max_count,
-                               const std::array<std::uint8_t, 32>& layout_hash,
-                               std::string_view schema_name) noexcept {
+                              std::size_t element_size,
+                              std::size_t max_count,
+                              const std::array<std::uint8_t, 32>& layout_hash,
+                              std::string_view schema_name) noexcept {
     if (impl_ == nullptr || impl_->active) return false;
     const std::string key(source_name);
-    if (impl_->topics.find(key) != impl_->topics.end()) {
+    if (impl_->topics.contains(key)) {
         return true;
     }
     auto* subscriber = impl_->transport.create_subscriber(source_name, element_size, max_count, layout_hash);
@@ -130,7 +130,8 @@ bool Recorder::start() noexcept {
     impl_->active = true;
     impl_->start_sim_time_ns = static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count());
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count());
 
     // Register schemas and channels for each topic.
     for (auto& [name, state] : impl_->topics) {
@@ -150,7 +151,7 @@ bool Recorder::start() noexcept {
             std::string hash_hex;
             hash_hex.reserve(64);
             static constexpr std::array<char, 16> hex = {
-                '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
+                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
             for (auto b : state.layout_hash) {
                 hash_hex.push_back(hex[(b >> 4) & 0x0F]);
                 hash_hex.push_back(hex[b & 0x0F]);
@@ -226,7 +227,8 @@ void Recorder::record_blackboard() noexcept {
         msg.channel_id = kBlackboardChannelId;
         msg.sequence = static_cast<std::uint32_t>(revision);
         msg.log_time = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count());
+                                                      std::chrono::steady_clock::now().time_since_epoch())
+                                                      .count());
         msg.publish_time = msg.log_time;
         msg.data = reinterpret_cast<const std::byte*>(&update);
         msg.data_size = sizeof(update);
@@ -254,7 +256,8 @@ bool Recorder::stop() noexcept {
 
     mcap::Attachment attachment{};
     attachment.log_time = static_cast<std::uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count());
+                                                         std::chrono::steady_clock::now().time_since_epoch())
+                                                         .count());
     attachment.create_time = attachment.log_time;
     attachment.name = "RecordingMetadata";
     attachment.media_type = "application/x-nxd.recording-metadata";

@@ -25,7 +25,6 @@ class Entry {
     [[nodiscard]] std::string_view name() const noexcept { return std::string_view(name_.data()); }
     [[nodiscard]] const std::array<std::uint8_t, 32>& layout_hash() const noexcept { return layout_hash_; }
     [[nodiscard]] std::size_t value_size() const noexcept { return value_.size(); }
-
   private:
     std::array<char, 64> name_{};
     std::array<std::uint8_t, 32> layout_hash_{};
@@ -54,7 +53,6 @@ class Blackboard {
 
     /// Access the entry at the given populated slot index, or nullptr if out of range.
     [[nodiscard]] const Entry* entry(std::size_t index) const noexcept;
-
   private:
     mutable std::mutex mutex_;
     struct Slot {

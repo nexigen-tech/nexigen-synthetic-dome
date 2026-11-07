@@ -38,13 +38,7 @@ struct Plugin {
     }
 
     bool validate_abi() const {
-        return table->abi_version.major == 1
-            && table->table_size == sizeof(NxdAbiTable)
-            && table->create != nullptr
-            && table->destroy != nullptr
-            && table->arm != nullptr
-            && table->step != nullptr
-            && table->stop != nullptr;
+        return table->abi_version.major == 1 && table->table_size == sizeof(NxdAbiTable) && table->create != nullptr && table->destroy != nullptr && table->arm != nullptr && table->step != nullptr && table->stop != nullptr;
     }
 
     bool create_state() {

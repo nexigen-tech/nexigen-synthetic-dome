@@ -89,8 +89,10 @@ int main() {
     if (manifest->instances[0].parameters[0].value != 10) return 14;
     if (manifest->instances[0].thread_roles[0].role != "control") return 15;
 
-    if (!manifest->wires[0].let_boundary_id.has_value()) return 20;
-    if (*manifest->wires[0].let_boundary_id != "control_to_plant") return 21;
+    const auto& boundary_id = manifest->wires[0].let_boundary_id;
+    if (!boundary_id.has_value() || boundary_id.value() != "control_to_plant") {
+        return 21;
+    }
 
     if (manifest->let_boundaries[0].write_deadline_ns != 200'000) return 30;
 

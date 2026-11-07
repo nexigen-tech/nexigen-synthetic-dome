@@ -38,7 +38,6 @@ class ReplaySource {
 
     /// Simulation time of the next sample to emit, or -1 when finished.
     [[nodiscard]] std::int64_t next_sim_time_ns() const noexcept;
-
   private:
     struct Impl;
     Impl* impl_ = nullptr;

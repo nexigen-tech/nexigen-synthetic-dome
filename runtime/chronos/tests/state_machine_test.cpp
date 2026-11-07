@@ -74,22 +74,22 @@ int main() {
     {
         chronos::Runtime rt{step_config()};
         const auto before = rt.state();
-        if (!failed(rt.arm())) return 30;       // uninitialized -> arm invalid
+        if (!failed(rt.arm())) return 30; // uninitialized -> arm invalid
         if (rt.state() != before) return 31;
 
         if (!ok(rt.initialize())) return 32;
         if (!failed(rt.initialize())) return 33; // already initialized
         if (rt.state() != chronos::State::Initialized) return 34;
 
-        if (!failed(rt.play())) return 35;       // Step mode rejects play
+        if (!failed(rt.play())) return 35; // Step mode rejects play
         if (rt.state() != chronos::State::Initialized) return 36;
 
-        if (!failed(rt.step())) return 37;       // initialized -> step invalid
+        if (!failed(rt.step())) return 37; // initialized -> step invalid
         if (rt.state() != chronos::State::Initialized) return 38;
 
         if (!ok(rt.arm())) return 39;
         auto state_after_arm = rt.state();
-        if (!failed(rt.arm())) return 40;       // already armed
+        if (!failed(rt.arm())) return 40; // already armed
         if (rt.state() != state_after_arm) return 41;
 
         if (!ok(rt.step())) return 42;

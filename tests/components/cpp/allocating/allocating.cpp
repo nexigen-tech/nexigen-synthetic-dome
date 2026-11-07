@@ -11,49 +11,49 @@
 
 namespace {
 
-    struct AllocatingState {
-        bool armed = false;
-    };
+struct AllocatingState {
+    bool armed = false;
+};
 
-    AllocatingState g_state{};
+AllocatingState g_state{};
 
-    NxdComponentState* create() {
-        g_state = AllocatingState{};
-        return reinterpret_cast<NxdComponentState*>(&g_state);
+NxdComponentState* create() {
+    g_state = AllocatingState{};
+    return reinterpret_cast<NxdComponentState*>(&g_state);
+}
+
+void destroy(NxdComponentState*) {}
+
+NxdStatus initialize(NxdComponentState*, const char*, std::uintptr_t) {
+    return NXD_OK;
+}
+
+NxdStatus arm(NxdComponentState* state, const NxdFrameContext*) {
+    if (state == nullptr) {
+        return NXD_ERROR_INVALID_ARGUMENT;
     }
+    g_state.armed = true;
+    return NXD_OK;
+}
 
-    void destroy(NxdComponentState*) {}
-
-    NxdStatus initialize(NxdComponentState*, const char*, std::uintptr_t) {
-        return NXD_OK;
+NxdStatus step(NxdComponentState* state, const NxdFrameContext*) {
+    if (state == nullptr) {
+        return NXD_ERROR_INVALID_ARGUMENT;
     }
-
-    NxdStatus arm(NxdComponentState* state, const NxdFrameContext*) {
-        if (state == nullptr) {
-            return NXD_ERROR_INVALID_ARGUMENT;
-        }
-        g_state.armed = true;
-        return NXD_OK;
+    if (!g_state.armed) {
+        return NXD_ERROR_NOT_INITIALIZED;
     }
-
-    NxdStatus step(NxdComponentState* state, const NxdFrameContext*) {
-        if (state == nullptr) {
-            return NXD_ERROR_INVALID_ARGUMENT;
-        }
-        if (!g_state.armed) {
-            return NXD_ERROR_NOT_INITIALIZED;
-        }
-        // Intentional allocation after arming.  The harness test expects this to
-        // be detected and reported as an out-of-memory error.
-        void* ptr = std::malloc(64);
-        if (ptr != nullptr) {
-            std::free(ptr);
-            return NXD_ERROR_OUT_OF_MEMORY;
-        }
-        return NXD_OK;
+    // Intentional allocation after arming.  The harness test expects this to
+    // be detected and reported as an out-of-memory error.
+    void* ptr = std::malloc(64);
+    if (ptr != nullptr) {
+        std::free(ptr);
+        return NXD_ERROR_OUT_OF_MEMORY;
     }
+    return NXD_OK;
+}
 
-    void stop(NxdComponentState*) {}
+void stop(NxdComponentState*) {}
 
 } // namespace
 

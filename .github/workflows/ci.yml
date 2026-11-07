@@ -7,6 +7,92 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    name: lint
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone nexigen-cpp sibling dependency
+        run: |
+          mkdir -p ../nexigen-ecosystem
+          git clone --depth 1 --branch learning-enhancement https://github.com/nexigen-tech/nexigen-cpp.git ../nexigen-ecosystem/nexigen-cpp
+
+      - name: Patch missing nexigen-cpp cmake config template
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          Path("../nexigen-ecosystem/nexigen-cpp/cmake/nexigenConfig.cmake.in").write_text(
+              "@PACKAGE_INIT@\n"
+              "\n"
+              "# nexigen-cpp package configuration.\n"
+              "include(CMakeFindDependencyMacro)\n"
+              "find_dependency(Threads)\n"
+              "find_dependency(nlohmann_json)\n"
+              "include(\"${CMAKE_CURRENT_LIST_DIR}/nexigenTargets.cmake\")\n"
+              "set_property(TARGET nexigen::core APPEND PROPERTY\n"
+              "    INTERFACE_LINK_LIBRARIES nlohmann_json::nlohmann_json)\n"
+              "check_required_components(nexigen)\n"
+          )
+          PY
+
+      - name: Install system dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          APT_LISTCHANGES_FRONTEND: none
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            cmake \
+            ninja-build \
+            g++ \
+            clang-format \
+            clang-tidy \
+            libstdc++-13-dev \
+            xvfb \
+            libgl1-mesa-dev
+
+      - name: Create temp directory
+        run: mkdir -p /tmp/opencode
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/_deps
+          key: ${{ runner.os }}-lint-deps-v2-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-lint-deps-v2-
+
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Check formatting
+        run: cmake --build build --target nxd_clang_format -j$(nproc)
+
+      - name: Run clang-tidy
+        run: cmake --build build --target nxd_clang_tidy -j$(nproc)
+
   build-and-test:
     runs-on: ubuntu-24.04
     name: ${{ matrix.name }}

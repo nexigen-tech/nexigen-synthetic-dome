@@ -10,30 +10,30 @@
 
 namespace {
 
-    struct BadState {};
+struct BadState {};
 
-    BadState g_state{};
+BadState g_state{};
 
-    NxdComponentState* create() {
-        g_state = BadState{};
-        return reinterpret_cast<NxdComponentState*>(&g_state);
-    }
+NxdComponentState* create() {
+    g_state = BadState{};
+    return reinterpret_cast<NxdComponentState*>(&g_state);
+}
 
-    void destroy(NxdComponentState*) {}
+void destroy(NxdComponentState*) {}
 
-    NxdStatus initialize(NxdComponentState*, const char*, std::uintptr_t) {
-        return NXD_OK;
-    }
+NxdStatus initialize(NxdComponentState*, const char*, std::uintptr_t) {
+    return NXD_OK;
+}
 
-    NxdStatus arm(NxdComponentState*, const NxdFrameContext*) {
-        return NXD_OK;
-    }
+NxdStatus arm(NxdComponentState*, const NxdFrameContext*) {
+    return NXD_OK;
+}
 
-    NxdStatus step(NxdComponentState*, const NxdFrameContext*) {
-        return NXD_OK;
-    }
+NxdStatus step(NxdComponentState*, const NxdFrameContext*) {
+    return NXD_OK;
+}
 
-    void stop(NxdComponentState*) {}
+void stop(NxdComponentState*) {}
 
 } // namespace
 
@@ -59,26 +59,26 @@ const NxdAbiTable* nxd_abi_entry() {
     table.stop = stop;
     table.step_io = nullptr;
 
-#if defined(BAD_ABI_VERSION)
+#ifdef BAD_ABI_VERSION
     table.abi_version = NxdAbiVersion{2, 0, 0};
 #endif
 
-#if defined(BAD_TABLE_SIZE)
+#ifdef BAD_TABLE_SIZE
     table.table_size = sizeof(NxdAbiTable) + 64;
 #endif
 
-#if defined(BAD_FINGERPRINT)
+#ifdef BAD_FINGERPRINT
     table.fingerprint = NxdAbiFingerprint{};
 #endif
 
-#if defined(BAD_DESCRIPTOR_HASH)
+#ifdef BAD_DESCRIPTOR_HASH
     table.descriptor_hash =
         NxdAbiFingerprint{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 #endif
 
-#if defined(BAD_MISSING_FN)
+#ifdef BAD_MISSING_FN
     table.step = nullptr;
 #endif
 

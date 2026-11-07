@@ -79,7 +79,6 @@ class VirtualVideoRunner {
         }
         return out_buf[0];
     }
-
   private:
     std::unique_ptr<host::HeadlessHarness> harness_;
 };

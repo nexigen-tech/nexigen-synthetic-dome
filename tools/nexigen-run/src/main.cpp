@@ -38,8 +38,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-extern char** environ;
-
 namespace {
 
 [[nodiscard]] std::optional<std::string> read_file(const std::filesystem::path& path) noexcept {
@@ -123,7 +121,7 @@ struct SpawnedProcess final {
 
         pid_t pid = -1;
         const int rc = posix_spawn(&pid, exe_str.c_str(), &actions, &attr,
-                                     const_cast<char* const*>(argv), environ);
+                                   const_cast<char* const*>(argv), environ);
 
         posix_spawnattr_destroy(&attr);
         posix_spawn_file_actions_destroy(&actions);
@@ -191,10 +189,10 @@ namespace validation = nxd::runtime::validation;
         recorder = std::make_unique<recording::Recorder>(transport, plan.recording.output_path);
         for (const auto& topic : plan.recording.topics) {
             if (!recorder->register_topic(topic.source_name,
-                                           topic.element_size,
-                                           topic.max_count,
-                                           topic.layout_hash,
-                                           topic.schema_name)) {
+                                          topic.element_size,
+                                          topic.max_count,
+                                          topic.layout_hash,
+                                          topic.schema_name)) {
                 std::cerr << "error: recorder failed to register topic "
                           << topic.source_name << "\n";
                 return false;
@@ -411,9 +409,9 @@ int main(int argc, char** argv) {
     usleep(50'000);
 
     bool chronos_ok = drive_chronos(plan.chronos,
-                                     recorder.get(),
-                                     replay.get(),
-                                     validation_service.get());
+                                    recorder.get(),
+                                    replay.get(),
+                                    validation_service.get());
 
     if (!teardown_services(recorder.get(), replay.get(), validation_service.get())) {
         chronos_ok = false;

@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdint>
 #include <cstring>
+#include <string_view>
 
 namespace {
 
@@ -59,7 +60,7 @@ int main() {
     if (nxd_blackboard_get_update(entry, &update) != NXD_BLACKBOARD_OK) {
         return 6;
     }
-    if (std::strncmp(update.entry_name, "scenario/state", 64) != 0) {
+    if (std::string_view(update.entry_name) != "scenario/state") {
         return 7;
     }
     if (update.revision != static_cast<std::uint64_t>(revision) || update.apply_frame_no != 7) {

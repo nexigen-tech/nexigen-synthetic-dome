@@ -1,6 +1,10 @@
 #include "nxd/runtime/blackboard/blackboard.hpp"
 
+#include "backend.hpp"
+#include "iceoryx_backend.hpp"
+
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 
 namespace nxd::runtime::blackboard {
@@ -19,6 +23,14 @@ void copy_name(char* dst, std::size_t dst_size, std::string_view src) noexcept {
 bool layout_hash_equal(const std::array<std::uint8_t, 32>& a,
                        const std::array<std::uint8_t, 32>& b) noexcept {
     return std::memcmp(a.data(), b.data(), a.size()) == 0;
+}
+
+std::array<std::uint8_t, 32> copy_hash(const std::uint8_t layout_hash[32]) noexcept {
+    std::array<std::uint8_t, 32> hash{};
+    if (layout_hash != nullptr) {
+        std::memcpy(hash.data(), layout_hash, hash.size());
+    }
+    return hash;
 }
 
 } // namespace
@@ -161,26 +173,111 @@ const Entry* Blackboard::entry(std::size_t index) const noexcept {
     return nullptr;
 }
 
+namespace {
+
+/// Headless backend adapter.  Delegates to the in-process Blackboard singleton.
+class HeadlessBackend final : public Backend {
+  public:
+    int initialize() noexcept override {
+        Blackboard::instance();
+        return NXD_BLACKBOARD_OK;
+    }
+
+    NxdBlackboardEntry* create_entry(std::string_view name,
+                                     std::size_t value_size,
+                                     const std::array<std::uint8_t, 32>& layout_hash) noexcept override {
+        auto* entry = Blackboard::instance().create_entry(name, value_size, layout_hash);
+        return reinterpret_cast<NxdBlackboardEntry*>(entry);
+    }
+
+    const NxdBlackboardEntry* open_entry(std::string_view name,
+                                         const std::array<std::uint8_t, 32>& layout_hash) const noexcept override {
+        const auto* entry = Blackboard::instance().open_entry(name, layout_hash);
+        return reinterpret_cast<const NxdBlackboardEntry*>(entry);
+    }
+
+    std::int64_t write(NxdBlackboardEntry* entry,
+                       const void* value,
+                       std::size_t value_size,
+                       std::uint64_t apply_frame_no) noexcept override {
+        if (entry == nullptr) {
+            return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
+        }
+        auto* e = reinterpret_cast<Entry*>(entry);
+        return e->write(value, value_size, apply_frame_no);
+    }
+
+    int read(const NxdBlackboardEntry* entry,
+             void* out_value,
+             std::size_t value_size,
+             std::uint64_t* out_revision,
+             std::uint64_t* out_apply_frame_no) const noexcept override {
+        if (entry == nullptr || out_revision == nullptr || out_apply_frame_no == nullptr) {
+            return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
+        }
+        const auto* e = reinterpret_cast<const Entry*>(entry);
+        return e->read(out_value, value_size, *out_revision, *out_apply_frame_no);
+    }
+
+    int get_update(const NxdBlackboardEntry* entry, NxdBlackboardUpdate& out_update) const noexcept override {
+        if (entry == nullptr) {
+            return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
+        }
+        const auto* e = reinterpret_cast<const Entry*>(entry);
+        return e->get_update(out_update);
+    }
+
+    std::size_t entry_count() const noexcept override {
+        return Blackboard::instance().entry_count();
+    }
+
+    const char* entry_name(std::size_t index) const noexcept override {
+        const auto* e = Blackboard::instance().entry(index);
+        if (e == nullptr) {
+            return nullptr;
+        }
+        return e->name().data();
+    }
+};
+
+bool use_iceoryx2_backend() noexcept {
+    const char* env = std::getenv("NXD_BLACKBOARD_BACKEND");
+    if (env == nullptr) {
+        return false;
+    }
+    return std::strcmp(env, "iceoryx2") == 0;
+}
+
+Backend& backend() noexcept {
+    static HeadlessBackend headless;
+    static IceoryxBackend iceoryx2;
+    // The iceoryx2 backend is instantiated lazily on first use so that
+    // processes that do not need it never initialize iceoryx2.
+    if (use_iceoryx2_backend()) {
+        return iceoryx2;
+    }
+    return headless;
+}
+
+} // namespace
+
 } // namespace nxd::runtime::blackboard
 
 extern "C" {
 
 int nxd_blackboard_initialize(void) {
-    nxd::runtime::blackboard::Blackboard::instance();
-    return NXD_BLACKBOARD_OK;
+    return nxd::runtime::blackboard::backend().initialize();
 }
 
 NxdBlackboardEntry* nxd_blackboard_create_entry(const char* name,
                                                 std::uint64_t value_size,
                                                 const std::uint8_t layout_hash[32]) {
-    if (name == nullptr || layout_hash == nullptr) {
+    if (name == nullptr || layout_hash == nullptr || value_size == 0) {
         return nullptr;
     }
-    std::array<std::uint8_t, 32> hash{};
-    std::memcpy(hash.data(), layout_hash, hash.size());
-    auto* entry = nxd::runtime::blackboard::Blackboard::instance().create_entry(
+    auto hash = nxd::runtime::blackboard::copy_hash(layout_hash);
+    return nxd::runtime::blackboard::backend().create_entry(
         std::string_view(name), static_cast<std::size_t>(value_size), hash);
-    return reinterpret_cast<NxdBlackboardEntry*>(entry);
 }
 
 const NxdBlackboardEntry* nxd_blackboard_open_entry(const char* name,
@@ -188,22 +285,17 @@ const NxdBlackboardEntry* nxd_blackboard_open_entry(const char* name,
     if (name == nullptr || layout_hash == nullptr) {
         return nullptr;
     }
-    std::array<std::uint8_t, 32> hash{};
-    std::memcpy(hash.data(), layout_hash, hash.size());
-    const auto* entry = nxd::runtime::blackboard::Blackboard::instance().open_entry(
+    auto hash = nxd::runtime::blackboard::copy_hash(layout_hash);
+    return nxd::runtime::blackboard::backend().open_entry(
         std::string_view(name), hash);
-    return reinterpret_cast<const NxdBlackboardEntry*>(entry);
 }
 
 std::int64_t nxd_blackboard_write(NxdBlackboardEntry* entry,
                                   const void* value,
                                   std::uint64_t value_size,
                                   std::uint64_t apply_frame_no) {
-    if (entry == nullptr) {
-        return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
-    }
-    auto* e = reinterpret_cast<nxd::runtime::blackboard::Entry*>(entry);
-    return e->write(value, static_cast<std::size_t>(value_size), apply_frame_no);
+    return nxd::runtime::blackboard::backend().write(
+        entry, value, static_cast<std::size_t>(value_size), apply_frame_no);
 }
 
 int nxd_blackboard_read(const NxdBlackboardEntry* entry,
@@ -211,44 +303,32 @@ int nxd_blackboard_read(const NxdBlackboardEntry* entry,
                         std::uint64_t value_size,
                         std::uint64_t* out_revision,
                         std::uint64_t* out_apply_frame_no) {
-    if (entry == nullptr || out_revision == nullptr || out_apply_frame_no == nullptr) {
-        return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
-    }
-    const auto* e = reinterpret_cast<const nxd::runtime::blackboard::Entry*>(entry);
-    std::uint64_t revision = 0;
-    std::uint64_t apply_frame_no = 0;
-    int rc = e->read(out_value, static_cast<std::size_t>(value_size), revision, apply_frame_no);
-    if (rc == NXD_BLACKBOARD_OK) {
-        *out_revision = revision;
-        *out_apply_frame_no = apply_frame_no;
-    }
-    return rc;
+    return nxd::runtime::blackboard::backend().read(
+        entry, out_value, static_cast<std::size_t>(value_size), out_revision, out_apply_frame_no);
 }
 
 int nxd_blackboard_get_update(const NxdBlackboardEntry* entry, NxdBlackboardUpdate* out_update) {
     if (entry == nullptr || out_update == nullptr) {
         return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
     }
-    const auto* e = reinterpret_cast<const nxd::runtime::blackboard::Entry*>(entry);
-    return e->get_update(*out_update);
+    return nxd::runtime::blackboard::backend().get_update(entry, *out_update);
 }
 
 int nxd_blackboard_entry_count(void) {
-    return static_cast<int>(nxd::runtime::blackboard::Blackboard::instance().entry_count());
+    return static_cast<int>(nxd::runtime::blackboard::backend().entry_count());
 }
 
 int nxd_blackboard_get_entry_name(int index, char* out, std::size_t len) {
     if (index < 0 || out == nullptr || len == 0) {
         return NXD_BLACKBOARD_ERROR_INVALID_ARGUMENT;
     }
-    const auto* e = nxd::runtime::blackboard::Blackboard::instance().entry(
+    const char* name = nxd::runtime::blackboard::backend().entry_name(
         static_cast<std::size_t>(index));
-    if (e == nullptr) {
+    if (name == nullptr) {
         return NXD_BLACKBOARD_ERROR_NOT_FOUND;
     }
-    const auto name = e->name();
-    const std::size_t copy_len = std::min(name.size(), len - 1);
-    std::memcpy(out, name.data(), copy_len);
+    const std::size_t copy_len = std::min(std::strlen(name), len - 1);
+    std::memcpy(out, name, copy_len);
     out[copy_len] = '\0';
     return NXD_BLACKBOARD_OK;
 }

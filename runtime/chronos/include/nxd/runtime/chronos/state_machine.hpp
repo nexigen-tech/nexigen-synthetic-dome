@@ -110,7 +110,6 @@ class Runtime final {
 
     /// Current hardware/FPGA time.
     [[nodiscard]] HwFpgaTime hw_fpga_time() const noexcept;
-
   private:
     Config cfg_{};
     std::atomic<State> state_{State::Uninitialized};

@@ -84,7 +84,6 @@ class RxThread : public QThread {
           plugin_path_(plugin_path),
           shared_(shared),
           stop_flag_(stop_flag) {}
-
   protected:
     void run() override {
         host::HeadlessHarness harness(plugin_path_.toStdString(), descriptor_path_.toStdString());
@@ -150,7 +149,6 @@ class RxThread : public QThread {
             }
         }
     }
-
   private:
     QString descriptor_path_;
     QString plugin_path_;
@@ -160,7 +158,6 @@ class RxThread : public QThread {
 
 class HeadlessDisplay : public QObject {
     Q_OBJECT
-
   public:
     HeadlessDisplay(SharedFrame* shared, std::size_t target_frames, QObject* parent = nullptr)
         : QObject(parent), shared_(shared), target_frames_(target_frames) {}
@@ -200,7 +197,6 @@ class HeadlessDisplay : public QObject {
             }
         }
     }
-
   private:
     SharedFrame* shared_;
     std::size_t target_frames_ = 0;
@@ -210,7 +206,6 @@ class HeadlessDisplay : public QObject {
 
 class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions {
     Q_OBJECT
-
   public:
     VideoWidget(SharedFrame* shared, std::size_t target_frames, QWidget* parent = nullptr)
         : QOpenGLWidget(parent), shared_(shared), target_frames_(target_frames) {}
@@ -219,7 +214,6 @@ class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions {
 
   signals:
     void target_reached();
-
   protected:
     void initializeGL() override {
         initializeOpenGLFunctions();
@@ -292,7 +286,6 @@ class VideoWidget : public QOpenGLWidget, protected QOpenGLFunctions {
     void resizeGL(int w, int h) override {
         glViewport(0, 0, w, h);
     }
-
   private:
     SharedFrame* shared_;
     std::size_t target_frames_ = 0;

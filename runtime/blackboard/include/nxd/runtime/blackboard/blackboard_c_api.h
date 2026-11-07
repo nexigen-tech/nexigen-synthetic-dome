@@ -27,6 +27,13 @@ typedef struct {
 /**
  * Initialize the global Blackboard instance.  Idempotent and safe to call from
  * any thread; actual initialization happens once before the first use.
+ *
+ * The active backend is selected with the `NXD_BLACKBOARD_BACKEND` environment
+ * variable.  Unset, empty, "headless", or any unknown value selects the
+ * in-process headless backend.  Set to "iceoryx2" to enable the multi-process
+ * iceoryx2 backend, which shares entries across OS processes using shared
+ * memory.  The backend choice is process-local and must be consistent between
+ * processes that need to share the same Blackboard entries.
  */
 int nxd_blackboard_initialize(void);
 

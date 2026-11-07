@@ -22,7 +22,7 @@ namespace {
 }
 
 [[nodiscard]] bool hex_to_hash(const std::string& hex,
-                                std::array<std::uint8_t, 32>& out) noexcept {
+                               std::array<std::uint8_t, 32>& out) noexcept {
     out = {};
     if (hex.size() != 64) {
         return false;
@@ -51,7 +51,7 @@ namespace {
 }
 
 [[nodiscard]] bool from_json_optional_string(const nlohmann::json& j,
-                                              std::optional<std::string>& out) noexcept {
+                                             std::optional<std::string>& out) noexcept {
     if (j.is_null()) {
         out = std::nullopt;
         return true;
@@ -64,7 +64,7 @@ namespace {
 }
 
 [[nodiscard]] bool parse_string_array(const nlohmann::json& j,
-                                       std::vector<std::string>& out) noexcept {
+                                      std::vector<std::string>& out) noexcept {
     if (!j.is_array()) {
         return false;
     }

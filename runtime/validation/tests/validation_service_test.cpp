@@ -82,7 +82,7 @@ static int threshold_test() {
         }
         std::memcpy(loan.data, &samples[i], sizeof(Telemetry));
         transport::SampleMetadata meta{};
-        meta.sim_time_ns = static_cast<std::int64_t>((i + 1) * 1000);
+        meta.sim_time_ns = static_cast<std::int64_t>(i + 1) * 1000;
         meta.sequence = static_cast<std::uint32_t>(i + 1);
         pub->publish(meta);
         service.poll();
@@ -184,7 +184,7 @@ static int field_to_constant_test() {
         auto loan = pub->loan();
         std::memcpy(loan.data, &samples[i], sizeof(CountSample));
         transport::SampleMetadata meta{};
-        meta.sim_time_ns = static_cast<std::int64_t>((i + 1) * 1000);
+        meta.sim_time_ns = static_cast<std::int64_t>(i + 1) * 1000;
         meta.sequence = static_cast<std::uint32_t>(i + 1);
         pub->publish(meta);
         service.poll();
@@ -229,7 +229,7 @@ static int field_to_field_test() {
         auto loan = pub->loan();
         std::memcpy(loan.data, &samples[i], sizeof(Telemetry));
         transport::SampleMetadata meta{};
-        meta.sim_time_ns = static_cast<std::int64_t>((i + 1) * 1000);
+        meta.sim_time_ns = static_cast<std::int64_t>(i + 1) * 1000;
         meta.sequence = static_cast<std::uint32_t>(i + 1);
         pub->publish(meta);
         service.poll();
@@ -267,16 +267,16 @@ static int blackboard_rule_test() {
 
     float value = 3.0f;
     service.update_blackboard_value("sensor.offset",
-                                     reinterpret_cast<const std::byte*>(&value),
-                                     sizeof(value), 1000);
+                                    reinterpret_cast<const std::byte*>(&value),
+                                    sizeof(value), 1000);
     if (!service.failures().empty()) {
         return 62;
     }
 
     value = 7.0f;
     service.update_blackboard_value("sensor.offset",
-                                     reinterpret_cast<const std::byte*>(&value),
-                                     sizeof(value), 2000);
+                                    reinterpret_cast<const std::byte*>(&value),
+                                    sizeof(value), 2000);
     if (service.failures().size() != 1) {
         return 63;
     }

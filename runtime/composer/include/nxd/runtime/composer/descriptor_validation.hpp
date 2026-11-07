@@ -22,7 +22,7 @@ namespace nxd::runtime::composer {
 [[nodiscard]] nexigen::core::Result<
     std::unordered_map<std::string, nxd::host::ComponentDescriptor>>
 load_component_descriptors(const SystemManifest& manifest,
-                          const std::filesystem::path& base_path) noexcept;
+                           const std::filesystem::path& base_path) noexcept;
 
 /// Validates the manifest against the supplied component descriptors.
 [[nodiscard]] std::vector<ValidationDiagnostic>

@@ -62,8 +62,7 @@ class IceoryxPublisher final : public Publisher {
         }
 
         iox2_sample_mut_h sample = nullptr;
-        if (iox2_publisher_loan_slice_uninit(&handle_, nullptr, &sample, max_count_) != IOX2_OK
-            || sample == nullptr) {
+        if (iox2_publisher_loan_slice_uninit(&handle_, nullptr, &sample, max_count_) != IOX2_OK || sample == nullptr) {
             return SampleLoan{};
         }
 
@@ -99,7 +98,6 @@ class IceoryxPublisher final : public Publisher {
         iox2_sample_mut_send(loaned_sample_, nullptr);
         loaned_sample_ = nullptr;
     }
-
   private:
     iox2_publisher_h handle_ = nullptr;
     std::size_t element_size_ = 0;
@@ -161,7 +159,6 @@ class IceoryxSubscriber final : public Subscriber {
         view.metadata = last_metadata_;
         return view;
     }
-
   private:
     iox2_subscriber_h handle_ = nullptr;
     std::size_t element_size_ = 0;
@@ -185,8 +182,7 @@ IceoryxTransport::IceoryxTransport() noexcept : impl_(std::make_unique<Impl>()) 
         return;
     }
 
-    if (iox2_node_builder_create(builder, nullptr, iox2_service_type_e_IPC, &impl_->node)
-        != IOX2_OK) {
+    if (iox2_node_builder_create(builder, nullptr, iox2_service_type_e_IPC, &impl_->node) != IOX2_OK) {
         impl_->node = nullptr;
     }
 }
@@ -203,10 +199,10 @@ IceoryxTransport::~IceoryxTransport() {
 }
 
 Publisher* IceoryxTransport::create_publisher(std::string_view source_name,
-                                               std::size_t element_size,
-                                               std::size_t max_count,
-                                               const std::array<std::uint8_t, 32>&
-                                                   layout_hash) noexcept {
+                                              std::size_t element_size,
+                                              std::size_t max_count,
+                                              const std::array<std::uint8_t, 32>&
+                                                  layout_hash) noexcept {
     if (impl_ == nullptr || impl_->node == nullptr || element_size == 0 || max_count == 0) {
         return nullptr;
     }
@@ -222,8 +218,7 @@ Publisher* IceoryxTransport::create_publisher(std::string_view source_name,
     if (iox2_service_name_new(nullptr,
                               service_name.c_str(),
                               service_name.size(),
-                              &service_name_h)
-        != IOX2_OK) {
+                              &service_name_h) != IOX2_OK) {
         return nullptr;
     }
 
@@ -238,8 +233,7 @@ Publisher* IceoryxTransport::create_publisher(std::string_view source_name,
                                                               payload_name.c_str(),
                                                               payload_name.size(),
                                                               payload_size,
-                                                              payload_alignment)
-        != IOX2_OK) {
+                                                              payload_alignment) != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
     }
@@ -250,15 +244,13 @@ Publisher* IceoryxTransport::create_publisher(std::string_view source_name,
                                                                   header_name,
                                                                   std::strlen(header_name),
                                                                   sizeof(nxd::contracts::SampleHeader),
-                                                                  alignof(nxd::contracts::SampleHeader))
-        != IOX2_OK) {
+                                                                  alignof(nxd::contracts::SampleHeader)) != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
     }
 
     iox2_port_factory_pub_sub_h port_factory = nullptr;
-    if (iox2_service_builder_pub_sub_open_or_create(ps_builder, nullptr, &port_factory)
-        != IOX2_OK) {
+    if (iox2_service_builder_pub_sub_open_or_create(ps_builder, nullptr, &port_factory) != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
     }
@@ -283,10 +275,10 @@ Publisher* IceoryxTransport::create_publisher(std::string_view source_name,
 }
 
 Subscriber* IceoryxTransport::create_subscriber(std::string_view source_name,
-                                                 std::size_t element_size,
-                                                 std::size_t max_count,
-                                                 const std::array<std::uint8_t, 32>&
-                                                     layout_hash) noexcept {
+                                                std::size_t element_size,
+                                                std::size_t max_count,
+                                                const std::array<std::uint8_t, 32>&
+                                                    layout_hash) noexcept {
     if (impl_ == nullptr || impl_->node == nullptr || element_size == 0 || max_count == 0) {
         return nullptr;
     }
@@ -298,8 +290,7 @@ Subscriber* IceoryxTransport::create_subscriber(std::string_view source_name,
     if (iox2_service_name_new(nullptr,
                               service_name.c_str(),
                               service_name.size(),
-                              &service_name_h)
-        != IOX2_OK) {
+                              &service_name_h) != IOX2_OK) {
         return nullptr;
     }
 
@@ -314,8 +305,7 @@ Subscriber* IceoryxTransport::create_subscriber(std::string_view source_name,
                                                               payload_name.c_str(),
                                                               payload_name.size(),
                                                               payload_size,
-                                                              payload_alignment)
-        != IOX2_OK) {
+                                                              payload_alignment) != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
     }
@@ -326,15 +316,13 @@ Subscriber* IceoryxTransport::create_subscriber(std::string_view source_name,
                                                                   header_name,
                                                                   std::strlen(header_name),
                                                                   sizeof(nxd::contracts::SampleHeader),
-                                                                  alignof(nxd::contracts::SampleHeader))
-        != IOX2_OK) {
+                                                                  alignof(nxd::contracts::SampleHeader)) != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
     }
 
     iox2_port_factory_pub_sub_h port_factory = nullptr;
-    if (iox2_service_builder_pub_sub_open_or_create(ps_builder, nullptr, &port_factory)
-        != IOX2_OK) {
+    if (iox2_service_builder_pub_sub_open_or_create(ps_builder, nullptr, &port_factory) != IOX2_OK) {
         iox2_service_name_drop(service_name_h);
         return nullptr;
     }

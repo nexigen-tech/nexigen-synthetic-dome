@@ -8,10 +8,10 @@ void LetDeadlineTracker::declare_boundary(const LetBoundary& boundary) noexcept 
 
 std::optional<LetViolation>
 LetDeadlineTracker::record_write(const std::string& source_instance,
-                                  const std::string& source_port,
-                                  const std::string& target_instance,
-                                  const std::string& target_port,
-                                  SimTime write_time) noexcept {
+                                 const std::string& source_port,
+                                 const std::string& target_instance,
+                                 const std::string& target_port,
+                                 SimTime write_time) noexcept {
     const LetBoundary* const boundary =
         find_boundary(source_instance, source_port, target_instance, target_port);
     if (boundary == nullptr) {
@@ -19,7 +19,7 @@ LetDeadlineTracker::record_write(const std::string& source_instance,
     }
 
     if (write_time.ns > boundary->write_deadline.ns) {
-        const LetViolation violation{
+        LetViolation violation{
             .boundary_id = boundary->id,
             .write_time = write_time,
             .write_deadline = boundary->write_deadline,
@@ -42,9 +42,9 @@ void LetDeadlineTracker::reset() noexcept {
 }
 
 const LetBoundary* LetDeadlineTracker::find_boundary(const std::string& source_instance,
-                                                      const std::string& source_port,
-                                                      const std::string& target_instance,
-                                                      const std::string& target_port) const noexcept {
+                                                     const std::string& source_port,
+                                                     const std::string& target_instance,
+                                                     const std::string& target_port) const noexcept {
     for (const auto& boundary : boundaries_) {
         if (boundary.source_instance == source_instance &&
             boundary.source_port == source_port &&

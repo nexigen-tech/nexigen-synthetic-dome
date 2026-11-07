@@ -57,7 +57,7 @@ static int record_and_replay_test() {
         }
         std::memcpy(loan.data, &samples[i], sizeof(TestSignal));
         transport::SampleMetadata meta{};
-        meta.sim_time_ns = static_cast<std::int64_t>((i + 1) * 100);
+        meta.sim_time_ns = static_cast<std::int64_t>(i + 1) * 100;
         meta.sequence = static_cast<std::uint32_t>(i + 1);
         pub->publish(meta);
         recorder.poll();
@@ -86,7 +86,7 @@ static int record_and_replay_test() {
     }
 
     for (int i = 0; i < 4; ++i) {
-        const std::int64_t t = static_cast<std::int64_t>((i + 1) * 100);
+        const std::int64_t t = static_cast<std::int64_t>(i + 1) * 100;
         if (!replay.step(t)) {
             return 20 + i;
         }

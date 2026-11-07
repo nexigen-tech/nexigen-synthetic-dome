@@ -48,7 +48,6 @@ class Partition final {
 
     /// Returns the most recently published frame context.
     [[nodiscard]] FrameContext latest() const noexcept;
-
   private:
     std::uint32_t id_;
     std::string name_;

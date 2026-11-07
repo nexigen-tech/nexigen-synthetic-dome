@@ -36,7 +36,7 @@ struct ConsumerState {
     const NxdBlackboardEntry* scenario_entry = nullptr;
 };
 
-static ConsumerState g_state;
+ConsumerState g_state;
 
 NxdComponentState* create() {
     g_state = ConsumerState{};

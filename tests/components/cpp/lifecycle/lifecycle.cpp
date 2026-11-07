@@ -11,57 +11,57 @@
 
 namespace {
 
-    struct LifecycleState {
-        std::uint32_t fail_stage = 0;
-        NxdStatus fail_status = NXD_ERROR_GENERAL;
-    };
+struct LifecycleState {
+    std::uint32_t fail_stage = 0;
+    NxdStatus fail_status = NXD_ERROR_GENERAL;
+};
 
-    LifecycleState g_state{};
-    std::uint32_t g_destroy_count = 0;
-    std::uint32_t g_stop_count = 0;
+LifecycleState g_state{};
+std::uint32_t g_destroy_count = 0;
+std::uint32_t g_stop_count = 0;
 
-    NxdComponentState* create() {
-        g_state = LifecycleState{};
-        return reinterpret_cast<NxdComponentState*>(&g_state);
+NxdComponentState* create() {
+    g_state = LifecycleState{};
+    return reinterpret_cast<NxdComponentState*>(&g_state);
+}
+
+void destroy(NxdComponentState*) {
+    ++g_destroy_count;
+}
+
+NxdStatus initialize(NxdComponentState* state, const char*, std::uintptr_t) {
+    if (state == nullptr) {
+        return NXD_ERROR_INVALID_ARGUMENT;
     }
-
-    void destroy(NxdComponentState*) {
-        ++g_destroy_count;
+    if (g_state.fail_stage == 1) {
+        return g_state.fail_status;
     }
+    return NXD_OK;
+}
 
-    NxdStatus initialize(NxdComponentState* state, const char*, std::uintptr_t) {
-        if (state == nullptr) {
-            return NXD_ERROR_INVALID_ARGUMENT;
-        }
-        if (g_state.fail_stage == 1) {
-            return g_state.fail_status;
-        }
-        return NXD_OK;
+NxdStatus arm(NxdComponentState* state, const NxdFrameContext*) {
+    if (state == nullptr) {
+        return NXD_ERROR_INVALID_ARGUMENT;
     }
+    if (g_state.fail_stage == 2) {
+        return g_state.fail_status;
+    }
+    return NXD_OK;
+}
 
-    NxdStatus arm(NxdComponentState* state, const NxdFrameContext*) {
-        if (state == nullptr) {
-            return NXD_ERROR_INVALID_ARGUMENT;
-        }
-        if (g_state.fail_stage == 2) {
-            return g_state.fail_status;
-        }
-        return NXD_OK;
+NxdStatus step(NxdComponentState* state, const NxdFrameContext*) {
+    if (state == nullptr) {
+        return NXD_ERROR_INVALID_ARGUMENT;
     }
+    if (g_state.fail_stage == 3) {
+        return g_state.fail_status;
+    }
+    return NXD_OK;
+}
 
-    NxdStatus step(NxdComponentState* state, const NxdFrameContext*) {
-        if (state == nullptr) {
-            return NXD_ERROR_INVALID_ARGUMENT;
-        }
-        if (g_state.fail_stage == 3) {
-            return g_state.fail_status;
-        }
-        return NXD_OK;
-    }
-
-    void stop(NxdComponentState*) {
-        ++g_stop_count;
-    }
+void stop(NxdComponentState*) {
+    ++g_stop_count;
+}
 
 } // namespace
 

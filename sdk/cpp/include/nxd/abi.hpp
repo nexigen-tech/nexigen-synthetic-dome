@@ -16,7 +16,7 @@ extern "C" {
 
 namespace nxd {
 
-    inline constexpr std::size_t abi_table_size_v = sizeof(NxdAbiTable);
+inline constexpr std::size_t abi_table_size_v = sizeof(NxdAbiTable);
 
 } // namespace nxd
 

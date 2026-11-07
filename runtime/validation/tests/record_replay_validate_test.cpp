@@ -85,7 +85,7 @@ int main() {
     transport::HeadlessTransport live_transport;
     recording::Recorder recorder(live_transport, path);
     if (!recorder.register_topic("signal.f32", sizeof(SignalValueF32), 1, hash,
-                                  "SignalValueF32@1.0.0")) {
+                                 "SignalValueF32@1.0.0")) {
         return 1;
     }
     if (!recorder.start()) {

@@ -1,7 +1,7 @@
 # Рекомендованная последовательность OpenSpec changes
 
-Дата: 2026-11-05  
-Статус: результат исследования, не план реализации и не утверждённые требования.
+Дата: 2026-11-05 (обновлено 2026-11-07)  
+Статус: исследовательский roadmap, дополняемый по мере реализации.
 
 ## Происхождение документа
 
@@ -18,10 +18,11 @@
 - C++ и Rust components, Qt и Tauri + Svelte panels;
 - Blackboard, Composer, конфигурация и walking skeleton.
 
-На момент сохранения в проекте нет активных OpenSpec changes и durable specs.
-Этот документ фиксирует рекомендуемую декомпозицию будущей работы. Каждый пункт
-должен быть отдельно проработан через `/opsx-propose`; реализация выполняется
-через `/opsx-apply` после появления tasks.
+Изначально в проекте не было активных OpenSpec changes и durable specs. С момента
+создания документа все foundational changes пройдены, заархивированы в
+`openspec/changes/archive/` и покрыты durable specs в `openspec/specs/`. Этот
+документ теперь служит дорожной картой: фиксирует пройденный путь и следующие
+кандидаты в changes.
 
 ## Принципы декомпозиции
 
@@ -34,20 +35,21 @@
 6. Требования hot path сохраняются во всех changes: ноль аллокаций после
    `Armed`, ноль блокировок и исключений, предсказуемые буферы.
 
-## Последовательность
+## Пройденная последовательность (заархивировано)
 
-| # | Change | Основной результат | Зависимости |
+| # | Change | Основной результат | Статус |
 |---|---|---|---|
-| 1 | `add-contracts-and-component-sdk` | Контракты, C++/Rust types, component ABI, `nxd-host`, headless tests | nexigen-cpp |
-| 2 | `add-runtime-chronos-and-minimal-composer` | Кадры, время, LET, ThreadSpec, минимальный запуск через `nexigen-run` | #1 |
-| 3 | `add-virtual-can-skeleton` | `CAN_A`, два CANopen-узла, XDD, heartbeat, ошибки, монитор | #1, #2 |
-| 4 | `add-video-streaming-skeleton` | `Camera_Front_Left`, FullHD RGBA 50 FPS и Qt/OpenGL receiver | #1, #2 |
-| 5 | `add-blackboard-rust-and-tauri-skeleton` | Rust `scenario_control`, Blackboard, Tauri + Svelte | #1, #2; полезны #3, #4 |
-| 6 | `add-recording-replay-and-validation` | MCAP, replay, полная validation и приёмочные сценарии | #2-#5 |
+| 0 | `add-typed-port-transport` | Типизированные порты, `step_io`, zero-copy transport, headless backend, LET/wiring specs | Заархивирован |
+| 1 | `add-contracts-and-component-sdk` | Контракты, C++/Rust types, component ABI, `nxd-host`, headless tests | Заархивирован |
+| 2 | `add-runtime-chronos-and-minimal-composer` | Кадры, время, LET, ThreadSpec, минимальный запуск через `nexigen-run` | Заархивирован |
+| 3 | `add-virtual-can-skeleton` | `CAN_A`, два CANopen-узла, XDD, heartbeat, ошибки, монитор | Заархивирован |
+| 4 | `add-video-streaming-skeleton` | `Camera_Front_Left`, FullHD RGBA 50 FPS и Qt/OpenGL receiver | Заархивирован |
+| 5 | `add-blackboard-rust-and-tauri-skeleton` | Rust `scenario_control`, headless Blackboard, Tauri + Svelte stub | Заархивирован |
+| 6 | `add-recording-replay-and-validation` | MCAP, replay, полная validation и приёмочные сценарии | Заархивирован |
+| — | `stabilize-walking-skeleton` | Все 7 CMake-вариантов (default, debug, release, clang, asan, tsan, ubsan) зелёные | Заархивирован |
 
-Changes #3 и #4 можно выполнять независимо после #2. Change #5 также можно
-частично вести параллельно, но полный сценарий удобнее проверять при наличии
-CAN- и видеокомпонентов.
+Текущий walking skeleton собирается и проходит 42/42 теста в Release, включая
+end-to-end видео. Активных OpenSpec changes нет.
 
 ## 1. `add-contracts-and-component-sdk`
 
@@ -207,7 +209,21 @@ RT-прогон воспроизводится в Step с совпадающим
 - Панели не влияют на детерминированный результат моделей.
 - Каждый change отдельно указывает performance, latency и memory impact.
 
-## Следующий шаг
+## Рекомендуемые следующие change
 
-Запустить `/opsx-propose` для `add-contracts-and-component-sdk`. Настоящий
-документ не заменяет proposal/design/specs/tasks этого change.
+Walking skeleton стабилен, но остаются отложенные элементы из #5 и мелкие
+долги инфраструктуры. Рекомендуется не смешивать их в одном большом change.
+
+| Приоритет | Change | Зачем | Ключевой результат |
+|---|---|---|---|
+| 1 | `add-blackboard-iceoryx2-backend` | Панель и внешние процессы не могут разделять headless Blackboard; durable spec `runtime/blackboard` требует multi-process backend | Blackboard поверх iceoryx2, C API без изменений, fork-тесты, панель подключается из другого процесса |
+| 2 | `connect-scenario-panel-to-blackboard` | `panels/scenario-panel/src-tauri/src/lib.rs` содержит TODO: команды не публикуются, состояние не читается | Tauri backend публикует `ScenarioCommand`, получает decimated `scenario/state`, frontend отображает актуальное состояние |
+| 3 | `add-panel-launcher-to-nexigen-run` | `nexigen-run` пока не умеет запускать panel-процессы | Dome Plan может объявлять панели, runner стартует их после simulation processes |
+| 4 | `make-blackboard-seqlock-tsan-compatible` | В `stabilize-walking-skeleton` TSan-предупреждение подавлено через `-Wno-tsan`; правильный фикс — seqlock без неинструментируемого fence | TSan build проходит без специальных флагов, производительность сохраняется |
+| 5 | `remove-ci-nexigen-cpp-template-workaround` | `.github/workflows/ci.yml` содержит TODO про upstream `nexigen-cpp` cmake config template | Убрать патч шаблона, когда upstream выложит файл или исправит `.gitignore` |
+
+### Следующий шаг
+
+Запустить `openspec new change add-blackboard-iceoryx2-backend`, затем
+`openspec propose` для формирования proposal/design/specs/tasks. Этот change
+разблокирует панель и является логическим продолжением skeleton.

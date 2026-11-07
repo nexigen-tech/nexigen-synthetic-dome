@@ -9,7 +9,7 @@ namespace nxd::runtime::composer {
 namespace {
 
 [[nodiscard]] bool parse_string_array(const nlohmann::json& j,
-                                       std::vector<std::string>& out) noexcept {
+                                      std::vector<std::string>& out) noexcept {
     if (!j.is_array()) {
         return false;
     }
@@ -23,7 +23,7 @@ namespace {
 }
 
 [[nodiscard]] bool from_json_optional_string(const nlohmann::json& j,
-                                              std::optional<std::string>& out) noexcept {
+                                             std::optional<std::string>& out) noexcept {
     if (j.is_null()) {
         out = std::nullopt;
         return true;

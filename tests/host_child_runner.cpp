@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
 
     // Deliberately ignore the returned status: step failures are part of the
     // observable result and are reported below.
-    static_cast<void>(harness.run(frame_count));
+    [[maybe_unused]] const auto ignored = harness.run(frame_count);
 
     const auto& result = harness.last_result();
     std::cout << "frames_completed=" << result.frames_completed

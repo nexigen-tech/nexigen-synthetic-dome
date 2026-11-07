@@ -51,18 +51,35 @@ xvfb-run ctest --test-dir build --output-on-failure -j$(nproc)
 
 Sanitizer builds automatically disable the long video tests (`nxd_host_video_end_to_end` and `nxd_video_viewer_latency`) because they are not meaningful under heavy instrumentation.
 
+## Code formatting and static analysis
+
+Configure any build directory (the default `build` is recommended) and use the dedicated targets:
+
+```bash
+cmake -S . -B build
+cmake --build build --target nxd_clang_format -j$(nproc)
+cmake --build build --target nxd_clang_tidy -j$(nproc)
+```
+
+- `nxd_clang_format` runs `clang-format --dry-run --Werror` over all project C++ sources and headers.
+- `nxd_clang_format_apply` rewrites sources in place to match `.clang-format`.
+- `nxd_clang_tidy` runs `clang-tidy` over all project C++ translation units using the selected build directory's `compile_commands.json`.
+
+These checks are enforced in CI via the `lint` job in `.github/workflows/ci.yml`.
+
 ## Dependencies
 
 - CMake >= 3.25
 - C++23 compiler (GCC or Clang)
 - Stable Rust toolchain (for `cargo` builds and `nxdc`)
+- clang-format and clang-tidy (for lint targets)
 - OpenGL development libraries
 - Xvfb (for headless GUI tests)
 
 Ubuntu example:
 
 ```bash
-sudo apt-get install cmake ninja-build g++ clang xvfb libgl1-mesa-dev
+sudo apt-get install cmake ninja-build g++ clang clang-format clang-tidy xvfb libgl1-mesa-dev
 ```
 
 ## Component descriptors
@@ -89,7 +106,7 @@ The `main` branch should require the CI workflow to pass before merging. Configu
 
 - Require a pull request before merging.
 - Require status checks to pass before merging.
-- Search for and enable the `build-and-test` job checks (e.g., `default`, `release`, `clang`, `asan`, `tsan`, `ubsan`).
+- Search for and enable the `lint` job check and the `build-and-test` job checks (e.g., `default`, `release`, `clang`, `asan`, `tsan`, `ubsan`).
 
 ## Conventions
 

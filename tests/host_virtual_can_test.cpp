@@ -21,8 +21,8 @@ using nxd::contracts::RawCanBatchClassical;
 namespace {
 
 [[nodiscard]] RawCanBatchClassical run_to_frame(const char* descriptor_path,
-                                                 const char* plugin_path,
-                                                 std::uint64_t frame_count) {
+                                                const char* plugin_path,
+                                                std::uint64_t frame_count) {
     host::HeadlessHarness harness(plugin_path, descriptor_path);
     if (const auto st = harness.load(); !st) {
         std::cerr << "load failed\n";

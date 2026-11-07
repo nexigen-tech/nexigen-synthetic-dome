@@ -10,30 +10,30 @@
 
 namespace {
 
-    struct EmptyState {};
+struct EmptyState {};
 
-    EmptyState g_state{};
+EmptyState g_state{};
 
-    NxdComponentState* create() {
-        g_state = EmptyState{};
-        return reinterpret_cast<NxdComponentState*>(&g_state);
-    }
+NxdComponentState* create() {
+    g_state = EmptyState{};
+    return reinterpret_cast<NxdComponentState*>(&g_state);
+}
 
-    void destroy(NxdComponentState*) {}
+void destroy(NxdComponentState*) {}
 
-    NxdStatus initialize(NxdComponentState*, const char*, std::uintptr_t) {
-        return NXD_OK;
-    }
+NxdStatus initialize(NxdComponentState*, const char*, std::uintptr_t) {
+    return NXD_OK;
+}
 
-    NxdStatus arm(NxdComponentState*, const NxdFrameContext*) {
-        return NXD_OK;
-    }
+NxdStatus arm(NxdComponentState*, const NxdFrameContext*) {
+    return NXD_OK;
+}
 
-    NxdStatus step(NxdComponentState*, const NxdFrameContext*) {
-        return NXD_OK;
-    }
+NxdStatus step(NxdComponentState*, const NxdFrameContext*) {
+    return NXD_OK;
+}
 
-    void stop(NxdComponentState*) {}
+void stop(NxdComponentState*) {}
 
 } // namespace
 

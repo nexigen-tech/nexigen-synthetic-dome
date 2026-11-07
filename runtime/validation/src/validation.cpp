@@ -28,10 +28,16 @@ namespace {
         return 0.0;
     }
     switch (spec.size) {
-        case 1: return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int8_t*>(ptr)) : static_cast<double>(*ptr);
-        case 2: return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int16_t*>(ptr)) : static_cast<double>(*reinterpret_cast<const std::uint16_t*>(ptr));
-        case 4: return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int32_t*>(ptr)) : static_cast<double>(*reinterpret_cast<const std::uint32_t*>(ptr));
-        case 8: return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int64_t*>(ptr)) : static_cast<double>(*reinterpret_cast<const std::uint64_t*>(ptr));
+    case 1:
+        return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int8_t*>(ptr)) : static_cast<double>(*ptr);
+    case 2:
+        return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int16_t*>(ptr)) : static_cast<double>(*reinterpret_cast<const std::uint16_t*>(ptr));
+    case 4:
+        return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int32_t*>(ptr)) : static_cast<double>(*reinterpret_cast<const std::uint32_t*>(ptr));
+    case 8:
+        return spec.is_signed ? static_cast<double>(*reinterpret_cast<const std::int64_t*>(ptr)) : static_cast<double>(*reinterpret_cast<const std::uint64_t*>(ptr));
+    default:
+        break;
     }
     return 0.0;
 }
@@ -40,36 +46,48 @@ namespace {
     const double lhs = value;
     const double rhs = rule.has_constant ? rule.constant : reference;
     switch (rule.op) {
-        case PredicateOp::LessThan: return lhs < rhs;
-        case PredicateOp::LessOrEqual: return lhs <= rhs;
-        case PredicateOp::GreaterThan: return lhs > rhs;
-        case PredicateOp::GreaterOrEqual: return lhs >= rhs;
-        case PredicateOp::Equal: {
-            if (rule.field.is_floating) {
-                return std::fabs(lhs - rhs) < 1e-6;
-            }
-            return lhs == rhs;
+    case PredicateOp::LessThan:
+        return lhs < rhs;
+    case PredicateOp::LessOrEqual:
+        return lhs <= rhs;
+    case PredicateOp::GreaterThan:
+        return lhs > rhs;
+    case PredicateOp::GreaterOrEqual:
+        return lhs >= rhs;
+    case PredicateOp::Equal: {
+        if (rule.field.is_floating) {
+            return std::fabs(lhs - rhs) < 1e-6;
         }
-        case PredicateOp::NotEqual: {
-            if (rule.field.is_floating) {
-                return std::fabs(lhs - rhs) >= 1e-6;
-            }
-            return lhs != rhs;
+        return lhs == rhs;
+    }
+    case PredicateOp::NotEqual: {
+        if (rule.field.is_floating) {
+            return std::fabs(lhs - rhs) >= 1e-6;
         }
-        case PredicateOp::Present: return true;
+        return lhs != rhs;
+    }
+    case PredicateOp::Present:
+        return true;
     }
     return false;
 }
 
 [[nodiscard]] const char* op_name(PredicateOp op) noexcept {
     switch (op) {
-        case PredicateOp::LessThan: return "<";
-        case PredicateOp::LessOrEqual: return "<=";
-        case PredicateOp::GreaterThan: return ">";
-        case PredicateOp::GreaterOrEqual: return ">=";
-        case PredicateOp::Equal: return "==";
-        case PredicateOp::NotEqual: return "!=";
-        case PredicateOp::Present: return "present";
+    case PredicateOp::LessThan:
+        return "<";
+    case PredicateOp::LessOrEqual:
+        return "<=";
+    case PredicateOp::GreaterThan:
+        return ">";
+    case PredicateOp::GreaterOrEqual:
+        return ">=";
+    case PredicateOp::Equal:
+        return "==";
+    case PredicateOp::NotEqual:
+        return "!=";
+    case PredicateOp::Present:
+        return "present";
     }
     return "?";
 }
@@ -121,9 +139,9 @@ ValidationService::~ValidationService() {
 }
 
 bool ValidationService::add_rule(const Rule& rule,
-                                  std::size_t element_size,
-                                  std::size_t max_count,
-                                  const std::array<std::uint8_t, 32>& layout_hash) noexcept {
+                                 std::size_t element_size,
+                                 std::size_t max_count,
+                                 const std::array<std::uint8_t, 32>& layout_hash) noexcept {
     if (impl_ == nullptr) return false;
     auto* subscriber = impl_->transport.create_subscriber(rule.topic, element_size, max_count, layout_hash);
     if (subscriber == nullptr) return false;
@@ -146,9 +164,9 @@ bool ValidationService::add_blackboard_rule(const Rule& rule) noexcept {
 }
 
 void ValidationService::update_blackboard_value(std::string_view key,
-                                                 const std::byte* data,
-                                                 std::size_t size,
-                                                 std::int64_t sim_time_ns) noexcept {
+                                                const std::byte* data,
+                                                std::size_t size,
+                                                std::int64_t sim_time_ns) noexcept {
     if (impl_ == nullptr || data == nullptr) return;
     for (auto& state : impl_->rules) {
         if (!state.is_blackboard_rule || state.rule.blackboard_key != key) continue;

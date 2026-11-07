@@ -22,6 +22,64 @@ std::filesystem::path write_temp(const char* name, std::string_view content) {
     return path;
 }
 
+bool check_metadata(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.name != "test.counter" || desc.version.major != 1 || desc.version.minor != 2 ||
+        desc.version.patch != 3) {
+        std::cerr << "valid_descriptor_loads: metadata mismatch\n";
+        return false;
+    }
+    return true;
+}
+
+bool check_sdk(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.sdk.abi_major != 1 || desc.sdk.abi_minor != 0) {
+        std::cerr << "valid_descriptor_loads: sdk mismatch\n";
+        return false;
+    }
+    return true;
+}
+
+bool check_ports(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.ports.size() != 1 || desc.ports.front().name != "count" ||
+        desc.ports.front().direction != nxd::host::PortDescriptor::Direction::Out) {
+        std::cerr << "valid_descriptor_loads: port mismatch\n";
+        return false;
+    }
+    return true;
+}
+
+bool check_parameters(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.parameters.size() != 1 || desc.parameters.front().name != "limit") {
+        std::cerr << "valid_descriptor_loads: parameter mismatch\n";
+        return false;
+    }
+    return true;
+}
+
+bool check_thread_roles(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.thread_roles.size() != 1 || desc.thread_roles.front().name != "worker") {
+        std::cerr << "valid_descriptor_loads: thread role mismatch\n";
+        return false;
+    }
+    return true;
+}
+
+bool check_resources(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.resources.max_heap_bytes != 65536 || !desc.resources.deterministic) {
+        std::cerr << "valid_descriptor_loads: resources mismatch\n";
+        return false;
+    }
+    return true;
+}
+
+bool check_supported_modes(const nxd::host::ComponentDescriptor& desc) {
+    if (desc.supported_modes.size() != 1 || desc.supported_modes.front() != "default") {
+        std::cerr << "valid_descriptor_loads: supported modes mismatch\n";
+        return false;
+    }
+    return true;
+}
+
 bool valid_descriptor_loads() {
     const auto path = write_temp("nxd_valid_descriptor.json", R"({
         "name": "test.counter",
@@ -54,37 +112,10 @@ bool valid_descriptor_loads() {
         std::cerr << "valid_descriptor_loads: failed\n";
         return false;
     }
-    if (descriptor->name != "test.counter" || descriptor->version.major != 1 ||
-        descriptor->version.minor != 2 || descriptor->version.patch != 3) {
-        std::cerr << "valid_descriptor_loads: metadata mismatch\n";
-        return false;
-    }
-    if (descriptor->sdk.abi_major != 1 || descriptor->sdk.abi_minor != 0) {
-        std::cerr << "valid_descriptor_loads: sdk mismatch\n";
-        return false;
-    }
-    if (descriptor->ports.size() != 1 || descriptor->ports.front().name != "count" ||
-        descriptor->ports.front().direction != nxd::host::PortDescriptor::Direction::Out) {
-        std::cerr << "valid_descriptor_loads: port mismatch\n";
-        return false;
-    }
-    if (descriptor->parameters.size() != 1 || descriptor->parameters.front().name != "limit") {
-        std::cerr << "valid_descriptor_loads: parameter mismatch\n";
-        return false;
-    }
-    if (descriptor->thread_roles.size() != 1 || descriptor->thread_roles.front().name != "worker") {
-        std::cerr << "valid_descriptor_loads: thread role mismatch\n";
-        return false;
-    }
-    if (descriptor->resources.max_heap_bytes != 65536 || !descriptor->resources.deterministic) {
-        std::cerr << "valid_descriptor_loads: resources mismatch\n";
-        return false;
-    }
-    if (descriptor->supported_modes.size() != 1 || descriptor->supported_modes.front() != "default") {
-        std::cerr << "valid_descriptor_loads: supported modes mismatch\n";
-        return false;
-    }
-    return true;
+    return check_metadata(*descriptor) && check_sdk(*descriptor) &&
+           check_ports(*descriptor) && check_parameters(*descriptor) &&
+           check_thread_roles(*descriptor) && check_resources(*descriptor) &&
+           check_supported_modes(*descriptor);
 }
 
 bool missing_name_rejected() {

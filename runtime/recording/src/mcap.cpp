@@ -1,6 +1,7 @@
 #include "nxd/runtime/recording/mcap.hpp"
 
 #include "mcap_reader_impl.hpp"
+#include "mcap_writer_impl.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -14,68 +15,6 @@
 namespace nxd::runtime::recording::mcap {
 
 namespace {
-
-struct AttachmentEntry {
-    std::string name;
-    std::string media_type;
-    std::uint64_t log_time = 0;
-    std::uint64_t create_time = 0;
-    std::uint64_t data_size = 0;
-    std::uint64_t file_offset = 0;
-    std::uint64_t length = 0;
-};
-
-struct WriterImpl {
-    std::ofstream file;
-    std::vector<AttachmentEntry> attachments;
-    std::uint64_t message_count = 0;
-    std::uint64_t message_start_time = std::numeric_limits<std::uint64_t>::max();
-    std::uint64_t message_end_time = 0;
-    bool finalized = false;
-
-    [[nodiscard]] bool write_u8(std::uint8_t value) noexcept {
-        file.write(reinterpret_cast<const char*>(&value), sizeof(value));
-        return file.good();
-    }
-
-    [[nodiscard]] bool write_u16(std::uint16_t value) noexcept {
-        file.write(reinterpret_cast<const char*>(&value), sizeof(value));
-        return file.good();
-    }
-
-    [[nodiscard]] bool write_u32(std::uint32_t value) noexcept {
-        file.write(reinterpret_cast<const char*>(&value), sizeof(value));
-        return file.good();
-    }
-
-    [[nodiscard]] bool write_u64(std::uint64_t value) noexcept {
-        file.write(reinterpret_cast<const char*>(&value), sizeof(value));
-        return file.good();
-    }
-
-    [[nodiscard]] bool write_string(std::string_view value) noexcept {
-        const auto size = static_cast<std::uint32_t>(value.size());
-        if (!write_u32(size)) return false;
-        if (size == 0) return true;
-        file.write(value.data(), static_cast<std::streamsize>(size)); // NOLINT(bugprone-suspicious-stringview-data-usage)
-        return file.good();
-    }
-
-    [[nodiscard]] bool write_bytes(const std::byte* data, std::size_t size) noexcept {
-        if (!write_u64(static_cast<std::uint64_t>(size))) return false;
-        if (size == 0) return true;
-        file.write(reinterpret_cast<const char*>(data), static_cast<std::streamsize>(size));
-        return file.good();
-    }
-
-    [[nodiscard]] bool write_record_header(std::uint8_t opcode, std::uint64_t body_size) noexcept {
-        return write_u8(opcode) && write_u64(body_size);
-    }
-
-    [[nodiscard]] std::uint64_t current_offset() noexcept {
-        return static_cast<std::uint64_t>(file.tellp());
-    }
-};
 
 } // namespace
 
@@ -255,119 +194,32 @@ bool Writer::close() noexcept {
     if (impl_ == nullptr) return false;
     if (impl_->finalized || !impl_->file.is_open()) return impl_->finalized;
 
-    // Data end
-    const std::uint64_t data_end_size = sizeof(std::uint32_t); // data_section_crc = 0
-    if (!impl_->write_record_header(kOpDataEnd, data_end_size) ||
-        !impl_->write_u32(0u)) {
-        return false;
-    }
+    if (!impl_->write_data_end()) return false;
 
     const std::uint64_t summary_start = impl_->current_offset();
 
-    // AttachmentIndex entries
-    std::uint64_t attachment_index_group_start = impl_->current_offset();
+    std::uint64_t attachment_index_group_start = 0;
     std::uint64_t attachment_index_group_length = 0;
-    for (const auto& entry : impl_->attachments) {
-        const std::uint64_t index_length =
-            sizeof(std::uint64_t) + // offset
-            sizeof(std::uint64_t) + // length
-            sizeof(std::uint64_t) + // log_time
-            sizeof(std::uint64_t) + // create_time
-            sizeof(std::uint64_t) + // data_size
-            sizeof(std::uint32_t) + entry.name.size() +
-            sizeof(std::uint32_t) + entry.media_type.size();
-        if (!impl_->write_record_header(kOpAttachmentIndex, index_length) ||
-            !impl_->write_u64(entry.file_offset) ||
-            !impl_->write_u64(entry.length) ||
-            !impl_->write_u64(entry.log_time) ||
-            !impl_->write_u64(entry.create_time) ||
-            !impl_->write_u64(entry.data_size) ||
-            !impl_->write_string(entry.name) ||
-            !impl_->write_string(entry.media_type)) {
-            return false;
-        }
-        attachment_index_group_length += index_length + 1 + 8;
+    if (!impl_->write_attachment_index_group(attachment_index_group_start,
+                                             attachment_index_group_length)) {
+        return false;
     }
 
-    // Statistics
-    Statistics stats{};
-    stats.message_count = impl_->message_count;
-    stats.schema_count = 0;  // not tracked per file
-    stats.channel_count = 0; // not tracked per file
-    stats.attachment_count = static_cast<std::uint32_t>(impl_->attachments.size());
-    stats.message_start_time =
-        impl_->message_count == 0 ? 0 : impl_->message_start_time;
-    stats.message_end_time = impl_->message_end_time;
-    const std::uint64_t stats_offset = impl_->current_offset();
-    const std::uint64_t stats_group_start = stats_offset;
-    const std::uint64_t stats_body_size =
-        sizeof(std::uint64_t) + // message_count
-        sizeof(std::uint16_t) + // schema_count
-        sizeof(std::uint32_t) + // channel_count
-        sizeof(std::uint32_t) + // attachment_count
-        sizeof(std::uint32_t) + // metadata_count
-        sizeof(std::uint32_t) + // chunk_count
-        sizeof(std::uint64_t) + // message_start_time
-        sizeof(std::uint64_t) + // message_end_time
-        sizeof(std::uint32_t);  // channel_message_counts count = 0
-    const std::uint64_t stats_group_length = stats_body_size + 1 + 8;
-    if (!impl_->write_record_header(kOpStatistics, stats_body_size) ||
-        !impl_->write_u64(stats.message_count) ||
-        !impl_->write_u16(stats.schema_count) ||
-        !impl_->write_u32(stats.channel_count) ||
-        !impl_->write_u32(stats.attachment_count) ||
-        !impl_->write_u32(0u) || // metadata_count
-        !impl_->write_u32(0u) || // chunk_count
-        !impl_->write_u64(stats.message_start_time) ||
-        !impl_->write_u64(stats.message_end_time) ||
-        !impl_->write_u32(0u)) { // channel_message_counts count
+    std::uint64_t stats_group_start = 0;
+    std::uint64_t stats_group_length = 0;
+    if (!impl_->write_statistics(stats_group_start, stats_group_length)) {
         return false;
     }
 
     const std::uint64_t summary_offset_start = impl_->current_offset();
-
-    // SummaryOffset for AttachmentIndex
-    if (!impl_->attachments.empty()) {
-        const std::uint64_t body_size =
-            sizeof(std::uint8_t) +
-            sizeof(std::uint64_t) +
-            sizeof(std::uint64_t);
-        if (!impl_->write_record_header(kOpSummaryOffset, body_size) ||
-            !impl_->write_u8(kOpAttachmentIndex) ||
-            !impl_->write_u64(attachment_index_group_start) ||
-            !impl_->write_u64(attachment_index_group_length)) {
-            return false;
-        }
-    }
-    // SummaryOffset for Statistics
-    {
-        const std::uint64_t body_size =
-            sizeof(std::uint8_t) +
-            sizeof(std::uint64_t) +
-            sizeof(std::uint64_t);
-        if (!impl_->write_record_header(kOpSummaryOffset, body_size) ||
-            !impl_->write_u8(kOpStatistics) ||
-            !impl_->write_u64(stats_group_start) ||
-            !impl_->write_u64(stats_group_length)) {
-            return false;
-        }
-    }
-
-    const std::uint64_t footer_body_size =
-        sizeof(std::uint64_t) + // summaryStart
-        sizeof(std::uint64_t) + // summaryOffsetStart
-        sizeof(std::uint32_t);  // summaryCrc
-    if (!impl_->write_record_header(kOpFooter, footer_body_size) ||
-        !impl_->write_u64(summary_start) ||
-        !impl_->write_u64(summary_offset_start) ||
-        !impl_->write_u32(0u)) {
+    if (!impl_->write_summary_offsets(attachment_index_group_start,
+                                      attachment_index_group_length,
+                                      stats_group_start,
+                                      stats_group_length)) {
         return false;
     }
 
-    impl_->file.write(reinterpret_cast<const char*>(kMcapMagic.data()), kMcapMagic.size());
-    impl_->file.flush();
-    impl_->finalized = true;
-    return impl_->file.good();
+    return impl_->write_footer_and_magic(summary_start, summary_offset_start);
 }
 
 Reader::~Reader() {

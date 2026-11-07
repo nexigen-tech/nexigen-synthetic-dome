@@ -69,13 +69,18 @@ static bool test_continuous_mode_lifecycle() {
     return true;
 }
 
-static bool test_rejected_transactions_preserve_state() {
+static bool test_rejected_from_uninitialized() {
     chronos::Runtime rt{step_config()};
     const auto before = rt.state();
-    if (!failed(rt.arm())) return false; // uninitialized -> arm invalid
+    if (!failed(rt.arm())) return false;
     if (rt.state() != before) return false;
+    return true;
+}
 
+static bool test_rejected_from_initialized() {
+    chronos::Runtime rt{step_config()};
     if (!ok(rt.initialize())) return false;
+
     if (!failed(rt.initialize())) return false; // already initialized
     if (rt.state() != chronos::State::Initialized) return false;
 
@@ -85,7 +90,14 @@ static bool test_rejected_transactions_preserve_state() {
     if (!failed(rt.step())) return false; // initialized -> step invalid
     if (rt.state() != chronos::State::Initialized) return false;
 
+    return true;
+}
+
+static bool test_rejected_from_armed() {
+    chronos::Runtime rt{step_config()};
+    if (!ok(rt.initialize())) return false;
     if (!ok(rt.arm())) return false;
+
     auto state_after_arm = rt.state();
     if (!failed(rt.arm())) return false; // already armed
     if (rt.state() != state_after_arm) return false;
@@ -97,10 +109,17 @@ static bool test_rejected_transactions_preserve_state() {
     if (!failed(rt.pause())) return false;
     if (rt.state() != chronos::State::Armed) return false;
 
+    return true;
+}
+
+static bool test_rejected_from_stopped() {
+    chronos::Runtime rt{step_config()};
+    if (!ok(rt.initialize())) return false;
+    if (!ok(rt.arm())) return false;
+    if (!ok(rt.step())) return false;
     if (!ok(rt.stop())) return false;
     if (rt.state() != chronos::State::Stopped) return false;
 
-    // Disallowed after stop.
     if (!failed(rt.play())) return false;
     if (rt.state() != chronos::State::Stopped) return false;
     if (!failed(rt.step())) return false;
@@ -108,8 +127,18 @@ static bool test_rejected_transactions_preserve_state() {
     if (!failed(rt.pause())) return false;
     if (rt.state() != chronos::State::Stopped) return false;
 
+    return true;
+}
+
+static bool test_rejected_already_disposed() {
+    chronos::Runtime rt{step_config()};
+    if (!ok(rt.initialize())) return false;
+    if (!ok(rt.arm())) return false;
+    if (!ok(rt.step())) return false;
+    if (!ok(rt.stop())) return false;
     if (!ok(rt.dispose())) return false;
     if (rt.state() != chronos::State::Disposed) return false;
+
     if (!failed(rt.dispose())) return false; // already disposed
     if (rt.state() != chronos::State::Disposed) return false;
 
@@ -153,10 +182,14 @@ static bool test_invalid_config_zero_scale_factor() {
 int main() {
     if (!test_step_lifecycle_happy_path()) return 1;
     if (!test_continuous_mode_lifecycle()) return 2;
-    if (!test_rejected_transactions_preserve_state()) return 3;
-    if (!test_invalid_config_non_divisible_scaled_sil()) return 4;
-    if (!test_invalid_config_zero_base_interval()) return 5;
-    if (!test_invalid_config_zero_scale_factor()) return 6;
+    if (!test_rejected_from_uninitialized()) return 3;
+    if (!test_rejected_from_initialized()) return 4;
+    if (!test_rejected_from_armed()) return 5;
+    if (!test_rejected_from_stopped()) return 6;
+    if (!test_rejected_already_disposed()) return 7;
+    if (!test_invalid_config_non_divisible_scaled_sil()) return 8;
+    if (!test_invalid_config_zero_base_interval()) return 9;
+    if (!test_invalid_config_zero_scale_factor()) return 10;
 
     return 0;
 }

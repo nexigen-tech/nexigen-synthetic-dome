@@ -119,10 +119,79 @@ static bool test_missing_required_field_rejected() {
     return true;
 }
 
+static bool test_missing_required_section_rejected() {
+    if (composer::SystemManifest::from_json(R"({
+      "components": [],
+      "instances": [],
+      "partitions": [],
+      "wires": [],
+      "let_boundaries": [],
+      "processes": []
+    })")
+            .has_value()) {
+        return false;
+    }
+    return true;
+}
+
+static bool test_wrong_type_for_required_array_rejected() {
+    auto json = basic_manifest();
+    json.replace(json.find("\"partitions\": ["), 16, "\"partitions\": \"not-an-array\",");
+    if (composer::SystemManifest::from_json(json).has_value()) return false;
+    return true;
+}
+
+static bool test_malformed_component_element_rejected() {
+    if (composer::SystemManifest::from_json(R"({
+      "components": [{"name": "pid"}],
+      "instances": [], "partitions": [], "wires": [],
+      "let_boundaries": [], "processes": [],
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1}
+    })")
+            .has_value()) {
+        return false;
+    }
+    return true;
+}
+
+static bool test_malformed_instance_element_rejected() {
+    if (composer::SystemManifest::from_json(R"({
+      "components": [],
+      "instances": [{"id": "pid_1"}],
+      "partitions": [], "wires": [],
+      "let_boundaries": [], "processes": [],
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1}
+    })")
+            .has_value()) {
+        return false;
+    }
+    return true;
+}
+
+static bool test_malformed_wire_element_rejected() {
+    if (composer::SystemManifest::from_json(R"({
+      "components": [],
+      "instances": [],
+      "partitions": [],
+      "wires": [{"source_instance": "a"}],
+      "let_boundaries": [], "processes": [],
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1}
+    })")
+            .has_value()) {
+        return false;
+    }
+    return true;
+}
+
 int main() {
     if (!test_basic_manifest_parses()) return 1;
     if (!test_invalid_json_rejected()) return 2;
     if (!test_missing_required_field_rejected()) return 3;
+    if (!test_missing_required_section_rejected()) return 4;
+    if (!test_wrong_type_for_required_array_rejected()) return 5;
+    if (!test_malformed_component_element_rejected()) return 6;
+    if (!test_malformed_instance_element_rejected()) return 7;
+    if (!test_malformed_wire_element_rejected()) return 8;
 
     return 0;
 }

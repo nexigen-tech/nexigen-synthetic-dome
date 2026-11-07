@@ -22,6 +22,51 @@ namespace {
     return true;
 }
 
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_array(const nlohmann::json& j,
+                               std::vector<T>& out,
+                               const ParseFn& parse) noexcept {
+    if (!j.is_array()) {
+        return false;
+    }
+    for (const auto& item : j) {
+        const auto parsed = parse(item);
+        if (!parsed.has_value()) {
+            return false;
+        }
+        out.push_back(*parsed);
+    }
+    return true;
+}
+
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_required_array(const nlohmann::json& obj,
+                                        std::string_view key,
+                                        std::vector<T>& out,
+                                        const ParseFn& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end()) {
+        return false;
+    }
+    return parse_array(*it, out, parse);
+}
+
+[[nodiscard]] bool parse_required_section(const nlohmann::json& obj,
+                                          std::string_view key,
+                                          auto& out,
+                                          const auto& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end()) {
+        return false;
+    }
+    const auto parsed = parse(*it);
+    if (!parsed.has_value()) {
+        return false;
+    }
+    out = *parsed;
+    return true;
+}
+
 [[nodiscard]] bool from_json_optional_string(const nlohmann::json& j,
                                              std::optional<std::string>& out) noexcept {
     if (j.is_null()) {
@@ -32,6 +77,28 @@ namespace {
         return false;
     }
     out = j.get<std::string>();
+    return true;
+}
+
+[[nodiscard]] bool require_string(const nlohmann::json& item,
+                                  std::string_view key,
+                                  std::string& out) noexcept {
+    const auto it = item.find(key);
+    if (it == item.end() || !it->is_string()) {
+        return false;
+    }
+    out = it->get<std::string>();
+    return true;
+}
+
+[[nodiscard]] bool require_integer(const nlohmann::json& item,
+                                   std::string_view key,
+                                   std::int64_t& out) noexcept {
+    const auto it = item.find(key);
+    if (it == item.end() || !it->is_number_integer()) {
+        return false;
+    }
+    out = it->get<std::int64_t>();
     return true;
 }
 
@@ -96,20 +163,16 @@ thread_role_assignment_from_json(const nlohmann::json& j) noexcept {
     const auto parameters = j.find("parameters");
     if (parameters != j.end()) {
         if (!parameters->is_array()) return std::nullopt;
-        for (const auto& item : *parameters) {
-            const auto parsed = parameter_assignment_from_json(item);
-            if (!parsed) return std::nullopt;
-            inst.parameters.push_back(*parsed);
+        if (!parse_array(*parameters, inst.parameters, parameter_assignment_from_json)) {
+            return std::nullopt;
         }
     }
 
     const auto thread_roles = j.find("thread_roles");
     if (thread_roles != j.end()) {
         if (!thread_roles->is_array()) return std::nullopt;
-        for (const auto& item : *thread_roles) {
-            const auto parsed = thread_role_assignment_from_json(item);
-            if (!parsed) return std::nullopt;
-            inst.thread_roles.push_back(*parsed);
+        if (!parse_array(*thread_roles, inst.thread_roles, thread_role_assignment_from_json)) {
+            return std::nullopt;
         }
     }
 
@@ -158,28 +221,15 @@ partition_from_json(const nlohmann::json& j) noexcept {
 let_boundary_from_json(const nlohmann::json& j) noexcept {
     if (!j.is_object()) return std::nullopt;
     ManifestLetBoundary b;
-    const auto id = j.find("id");
-    const auto src_inst = j.find("source_instance");
-    const auto src_port = j.find("source_port");
-    const auto tgt_inst = j.find("target_instance");
-    const auto tgt_port = j.find("target_port");
-    const auto read_time = j.find("read_time_ns");
-    const auto write_deadline = j.find("write_deadline_ns");
-    if (id == j.end() || !id->is_string() || src_inst == j.end() ||
-        !src_inst->is_string() || src_port == j.end() || !src_port->is_string() ||
-        tgt_inst == j.end() || !tgt_inst->is_string() ||
-        tgt_port == j.end() || !tgt_port->is_string() ||
-        read_time == j.end() || !read_time->is_number_integer() ||
-        write_deadline == j.end() || !write_deadline->is_number_integer()) {
+    if (!require_string(j, "id", b.id) ||
+        !require_string(j, "source_instance", b.source_instance) ||
+        !require_string(j, "source_port", b.source_port) ||
+        !require_string(j, "target_instance", b.target_instance) ||
+        !require_string(j, "target_port", b.target_port) ||
+        !require_integer(j, "read_time_ns", b.read_time_ns) ||
+        !require_integer(j, "write_deadline_ns", b.write_deadline_ns)) {
         return std::nullopt;
     }
-    b.id = id->get<std::string>();
-    b.source_instance = src_inst->get<std::string>();
-    b.source_port = src_port->get<std::string>();
-    b.target_instance = tgt_inst->get<std::string>();
-    b.target_port = tgt_port->get<std::string>();
-    b.read_time_ns = read_time->get<std::int64_t>();
-    b.write_deadline_ns = write_deadline->get<std::int64_t>();
     return b;
 }
 
@@ -231,59 +281,17 @@ std::optional<SystemManifest> SystemManifest::from_json(std::string_view json) {
 
     SystemManifest manifest;
 
-    const auto components = obj.find("components");
-    if (components == obj.end() || !components->is_array()) return std::nullopt;
-    for (const auto& item : *components) {
-        const auto parsed = component_ref_from_json(item);
-        if (!parsed) return std::nullopt;
-        manifest.components.push_back(*parsed);
+    if (!parse_required_array(obj, "components", manifest.components,
+                              component_ref_from_json) ||
+        !parse_required_array(obj, "instances", manifest.instances, instance_from_json) ||
+        !parse_required_array(obj, "partitions", manifest.partitions, partition_from_json) ||
+        !parse_required_array(obj, "wires", manifest.wires, wire_from_json) ||
+        !parse_required_array(obj, "let_boundaries", manifest.let_boundaries,
+                              let_boundary_from_json) ||
+        !parse_required_array(obj, "processes", manifest.processes, process_from_json) ||
+        !parse_required_section(obj, "chronos", manifest.chronos, chronos_config_from_json)) {
+        return std::nullopt;
     }
-
-    const auto instances = obj.find("instances");
-    if (instances == obj.end() || !instances->is_array()) return std::nullopt;
-    for (const auto& item : *instances) {
-        const auto parsed = instance_from_json(item);
-        if (!parsed) return std::nullopt;
-        manifest.instances.push_back(*parsed);
-    }
-
-    const auto partitions = obj.find("partitions");
-    if (partitions == obj.end() || !partitions->is_array()) return std::nullopt;
-    for (const auto& item : *partitions) {
-        const auto parsed = partition_from_json(item);
-        if (!parsed) return std::nullopt;
-        manifest.partitions.push_back(*parsed);
-    }
-
-    const auto wires = obj.find("wires");
-    if (wires == obj.end() || !wires->is_array()) return std::nullopt;
-    for (const auto& item : *wires) {
-        const auto parsed = wire_from_json(item);
-        if (!parsed) return std::nullopt;
-        manifest.wires.push_back(*parsed);
-    }
-
-    const auto let_boundaries = obj.find("let_boundaries");
-    if (let_boundaries == obj.end() || !let_boundaries->is_array()) return std::nullopt;
-    for (const auto& item : *let_boundaries) {
-        const auto parsed = let_boundary_from_json(item);
-        if (!parsed) return std::nullopt;
-        manifest.let_boundaries.push_back(*parsed);
-    }
-
-    const auto processes = obj.find("processes");
-    if (processes == obj.end() || !processes->is_array()) return std::nullopt;
-    for (const auto& item : *processes) {
-        const auto parsed = process_from_json(item);
-        if (!parsed) return std::nullopt;
-        manifest.processes.push_back(*parsed);
-    }
-
-    const auto chronos = obj.find("chronos");
-    if (chronos == obj.end()) return std::nullopt;
-    const auto parsed_chronos = chronos_config_from_json(*chronos);
-    if (!parsed_chronos) return std::nullopt;
-    manifest.chronos = *parsed_chronos;
 
     return manifest;
 }

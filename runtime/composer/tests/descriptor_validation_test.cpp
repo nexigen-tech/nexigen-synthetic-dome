@@ -370,6 +370,23 @@ static bool test_undeclared_thread_role_assignment() {
     return diagnostics[0].role == "missing_role";
 }
 
+static bool test_empty_thread_role_name() {
+    auto m = make_valid_manifest();
+    m.instances[0].thread_roles.push_back(composer::ThreadRoleAssignment{"", "t0"});
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("empty thread role name") != std::string::npos;
+}
+
+static bool test_empty_thread_role_assignment() {
+    auto m = make_valid_manifest();
+    m.instances[0].thread_roles.push_back(
+        composer::ThreadRoleAssignment{"empty_thread", ""});
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("no thread assignment") != std::string::npos;
+}
+
 static bool test_duplicate_thread_role_assignment() {
     auto m = make_valid_manifest();
     m.instances[0].thread_roles.push_back(
@@ -417,8 +434,10 @@ int main() {
     if (!test_missing_port_layout_hash()) return 10;
     if (!test_hardware_rt_requirement_mismatch()) return 11;
     if (!test_undeclared_thread_role_assignment()) return 12;
-    if (!test_duplicate_thread_role_assignment()) return 13;
-    if (!test_thread_role_mapped_to_multiple_threads()) return 14;
+    if (!test_empty_thread_role_name()) return 13;
+    if (!test_empty_thread_role_assignment()) return 14;
+    if (!test_duplicate_thread_role_assignment()) return 15;
+    if (!test_thread_role_mapped_to_multiple_threads()) return 16;
 
     return 0;
 }

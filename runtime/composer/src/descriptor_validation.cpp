@@ -167,11 +167,10 @@ find_thread_role(const nxd::host::ComponentDescriptor& descriptor,
     return nullptr;
 }
 
-void validate_instance(const SystemManifest& manifest,
-                       const Instance& instance,
-                       const nxd::host::ComponentDescriptor& descriptor,
-                       std::vector<ValidationDiagnostic>& diagnostics) noexcept {
-    // Required ports and port contract metadata.
+void validate_required_ports(const SystemManifest& manifest,
+                             const Instance& instance,
+                             const nxd::host::ComponentDescriptor& descriptor,
+                             std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     for (const auto& port : descriptor.ports) {
         if (port.contract_name.empty()) {
             diagnostics.push_back(make_diagnostic(
@@ -200,8 +199,11 @@ void validate_instance(const SystemManifest& manifest,
                 std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name));
         }
     }
+}
 
-    // Required parameters and ranges.
+void validate_parameters(const Instance& instance,
+                         const nxd::host::ComponentDescriptor& descriptor,
+                         std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     for (const auto& param : descriptor.parameters) {
         const auto assigned = std::ranges::find(
             instance.parameters, param.name, &ParameterAssignment::name);
@@ -234,8 +236,11 @@ void validate_instance(const SystemManifest& manifest,
             }
         }
     }
+}
 
-    // Required thread roles.
+void validate_required_thread_roles(const Instance& instance,
+                                    const nxd::host::ComponentDescriptor& descriptor,
+                                    std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     for (const auto& role : descriptor.thread_roles) {
         if (!role.required) {
             continue;
@@ -251,8 +256,12 @@ void validate_instance(const SystemManifest& manifest,
                 "", role.name));
         }
     }
+}
 
-    // Supported modes.
+void validate_supported_mode(const SystemManifest& manifest,
+                             const Instance& instance,
+                             const nxd::host::ComponentDescriptor& descriptor,
+                             std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     const std::string mode_name = mode_to_string(manifest.chronos.mode);
     const auto supported = std::ranges::find(descriptor.supported_modes, mode_name);
     if (supported == descriptor.supported_modes.end()) {
@@ -262,10 +271,14 @@ void validate_instance(const SystemManifest& manifest,
                 instance.id, descriptor.name, mode_name),
             std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name));
     }
+}
 
-    // Hardware-time requirement: non-RT modes cannot use components that require
-    // hardware real-time timing.
+void validate_hardware_rt_requirement(const SystemManifest& manifest,
+                                      const Instance& instance,
+                                      const nxd::host::ComponentDescriptor& descriptor,
+                                      std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     if (manifest.chronos.mode != 0 && descriptor.resources.requires_hardware_rt) {
+        const std::string mode_name = mode_to_string(manifest.chronos.mode);
         diagnostics.push_back(make_diagnostic(
             std::format(
                 "instance '{}' of component '{}' requires hardware real-time timing, "
@@ -273,9 +286,11 @@ void validate_instance(const SystemManifest& manifest,
                 instance.id, descriptor.name, mode_name),
             std::nullopt, std::nullopt, "", "", "", "", instance.id, descriptor.name));
     }
+}
 
-    // Assigned thread roles must be declared by the descriptor and must not be
-    // duplicated within the same instance.
+void validate_assigned_thread_roles(const Instance& instance,
+                                    const nxd::host::ComponentDescriptor& descriptor,
+                                    std::vector<ValidationDiagnostic>& diagnostics) noexcept {
     std::unordered_set<std::string> seen_assigned_roles;
     for (const auto& assignment : instance.thread_roles) {
         if (assignment.role.empty()) {
@@ -313,6 +328,18 @@ void validate_instance(const SystemManifest& manifest,
                 descriptor.name, "", assignment.role));
         }
     }
+}
+
+void validate_instance(const SystemManifest& manifest,
+                       const Instance& instance,
+                       const nxd::host::ComponentDescriptor& descriptor,
+                       std::vector<ValidationDiagnostic>& diagnostics) noexcept {
+    validate_required_ports(manifest, instance, descriptor, diagnostics);
+    validate_parameters(instance, descriptor, diagnostics);
+    validate_required_thread_roles(instance, descriptor, diagnostics);
+    validate_supported_mode(manifest, instance, descriptor, diagnostics);
+    validate_hardware_rt_requirement(manifest, instance, descriptor, diagnostics);
+    validate_assigned_thread_roles(instance, descriptor, diagnostics);
 }
 
 void validate_wire(const SystemManifest& manifest,

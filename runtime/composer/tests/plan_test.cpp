@@ -1,7 +1,7 @@
 /* Composer Dome Plan serialization tests.
  *
  * Verifies that partition and LET-boundary data types round-trip through JSON
- * without losing information.
+ * without losing information, and that malformed input is rejected.
  */
 
 #include "nxd/runtime/composer/plan.hpp"
@@ -10,6 +10,22 @@
 #include <string>
 
 namespace composer = nxd::runtime::composer;
+
+[[nodiscard]] std::string make_minimal_plan_json() {
+    return R"({
+  "version_major": 1,
+  "version_minor": 0,
+  "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+  "partitions": [],
+  "let_boundaries": [],
+  "wires": [],
+  "processes": []
+})";
+}
+
+[[nodiscard]] std::string make_valid_partition_json() {
+    return R"({"id": 1, "name": "control", "instance_ids": ["a"]})";
+}
 
 int main() {
     composer::DomePlan plan{};
@@ -131,6 +147,92 @@ int main() {
     const auto services_parsed = composer::DomePlan::from_json(services_json);
     if (!services_parsed.has_value()) return 7;
     if (*services_parsed != services_plan) return 8;
+
+    // Missing top-level required fields are rejected.
+    if (composer::DomePlan::from_json("{}").has_value()) return 9;
+
+    // Missing required array section is rejected.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": [], "let_boundaries": [], "wires": []
+    })")
+            .has_value()) {
+        return 10;
+    }
+
+    // Wrong type for a required array section is rejected.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": "not-an-array",
+      "let_boundaries": [], "wires": [], "processes": []
+    })")
+            .has_value()) {
+        return 11;
+    }
+
+    // Malformed partition element is rejected.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": [{"id": "not-a-number", "name": "x", "instance_ids": []}],
+      "let_boundaries": [], "wires": [], "processes": []
+    })")
+            .has_value()) {
+        return 12;
+    }
+
+    // Malformed wire element is rejected.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": [], "let_boundaries": [],
+      "wires": [{"source_instance": "a"}],
+      "processes": []
+    })")
+            .has_value()) {
+        return 13;
+    }
+
+    // Optional sections with invalid content are rejected.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": [], "let_boundaries": [], "wires": [], "processes": [],
+      "recording": {"enabled": "not-a-bool", "output_path": "", "topics": []}
+    })")
+            .has_value()) {
+        return 14;
+    }
+
+    // Invalid validation rule field is rejected.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": [], "let_boundaries": [], "wires": [], "processes": [],
+      "validation": {"enabled": true, "rules": [{"name": "r", "op": "eq"}]}
+    })")
+            .has_value()) {
+        return 15;
+    }
+
+    // Optional thread roles and parameter assignments accept valid input.
+    const auto minimal_parsed = composer::DomePlan::from_json(make_minimal_plan_json());
+    if (!minimal_parsed.has_value()) return 16;
+    if (!minimal_parsed->thread_role_assignments.empty()) return 17;
+    if (!minimal_parsed->parameter_assignments.empty()) return 18;
+
+    // Optional thread_role_assignments reject malformed elements.
+    if (composer::DomePlan::from_json(R"({
+      "version_major": 1, "version_minor": 0,
+      "chronos": {"mode": 3, "base_frame_interval_ns": 1000000, "scale_factor": 1},
+      "partitions": [], "let_boundaries": [], "wires": [], "processes": [],
+      "thread_role_assignments": [{"instance_id": "a"}]
+    })")
+            .has_value()) {
+        return 19;
+    }
 
     return 0;
 }

@@ -77,6 +77,88 @@ namespace {
     return true;
 }
 
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_array(const nlohmann::json& j,
+                               std::vector<T>& out,
+                               const ParseFn& parse) noexcept {
+    if (!j.is_array()) {
+        return false;
+    }
+    for (const auto& item : j) {
+        const auto parsed = parse(item);
+        if (!parsed.has_value()) {
+            return false;
+        }
+        out.push_back(*parsed);
+    }
+    return true;
+}
+
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_required_array(const nlohmann::json& obj,
+                                        std::string_view key,
+                                        std::vector<T>& out,
+                                        const ParseFn& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end()) {
+        return false;
+    }
+    return parse_array(*it, out, parse);
+}
+
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_optional_array(const nlohmann::json& obj,
+                                        std::string_view key,
+                                        std::vector<T>& out,
+                                        const ParseFn& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end()) {
+        return true;
+    }
+    return parse_array(*it, out, parse);
+}
+
+template <typename T, typename ParseFn>
+[[nodiscard]] bool parse_optional_section(const nlohmann::json& obj,
+                                          std::string_view key,
+                                          T& out,
+                                          const ParseFn& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end()) {
+        return true;
+    }
+    const auto parsed = parse(*it);
+    if (!parsed.has_value()) {
+        return false;
+    }
+    out = *parsed;
+    return true;
+}
+
+[[nodiscard]] bool parse_required_section(const nlohmann::json& obj,
+                                          std::string_view key,
+                                          auto& out,
+                                          const auto& parse) noexcept {
+    const auto it = obj.find(key);
+    if (it == obj.end()) {
+        return false;
+    }
+    const auto parsed = parse(*it);
+    if (!parsed.has_value()) {
+        return false;
+    }
+    out = *parsed;
+    return true;
+}
+
+[[nodiscard]] bool require_string(const nlohmann::json& item,
+                                  std::string_view key,
+                                  std::string& out) noexcept;
+
+[[nodiscard]] bool require_integer(const nlohmann::json& item,
+                                   std::string_view key,
+                                   std::int64_t& out) noexcept;
+
 [[nodiscard]] nlohmann::json let_boundary_to_json(const LetBoundary& b) {
     nlohmann::json j;
     j["id"] = b.id;
@@ -94,28 +176,15 @@ namespace {
         return std::nullopt;
     }
     LetBoundary b;
-    const auto id = item.find("id");
-    const auto src_inst = item.find("source_instance");
-    const auto src_port = item.find("source_port");
-    const auto tgt_inst = item.find("target_instance");
-    const auto tgt_port = item.find("target_port");
-    const auto read_time = item.find("read_time_ns");
-    const auto write_deadline = item.find("write_deadline_ns");
-    if (id == item.end() || !id->is_string() || src_inst == item.end() ||
-        !src_inst->is_string() || src_port == item.end() || !src_port->is_string() ||
-        tgt_inst == item.end() || !tgt_inst->is_string() ||
-        tgt_port == item.end() || !tgt_port->is_string() ||
-        read_time == item.end() || !read_time->is_number_integer() ||
-        write_deadline == item.end() || !write_deadline->is_number_integer()) {
+    if (!require_string(item, "id", b.id) ||
+        !require_string(item, "source_instance", b.source_instance) ||
+        !require_string(item, "source_port", b.source_port) ||
+        !require_string(item, "target_instance", b.target_instance) ||
+        !require_string(item, "target_port", b.target_port) ||
+        !require_integer(item, "read_time_ns", b.read_time_ns) ||
+        !require_integer(item, "write_deadline_ns", b.write_deadline_ns)) {
         return std::nullopt;
     }
-    b.id = id->get<std::string>();
-    b.source_instance = src_inst->get<std::string>();
-    b.source_port = src_port->get<std::string>();
-    b.target_instance = tgt_inst->get<std::string>();
-    b.target_port = tgt_port->get<std::string>();
-    b.read_time_ns = read_time->get<std::int64_t>();
-    b.write_deadline_ns = write_deadline->get<std::int64_t>();
     return b;
 }
 
@@ -370,12 +439,8 @@ parameter_assignment_from_json(const nlohmann::json& item) {
     }
     o.enabled = enabled->get<bool>();
     o.output_path = output_path->get<std::string>();
-    for (const auto& item : *topics) {
-        const auto parsed = recording_topic_from_json(item);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        o.topics.push_back(*parsed);
+    if (!parse_array(*topics, o.topics, recording_topic_from_json)) {
+        return std::nullopt;
     }
     return o;
 }
@@ -474,6 +539,92 @@ parameter_assignment_from_json(const nlohmann::json& item) {
     return j;
 }
 
+void extract_optional_string(const nlohmann::json& item,
+                             std::string_view key,
+                             std::string& out) noexcept {
+    const auto it = item.find(key);
+    if (it != item.end() && it->is_string()) {
+        out = it->get<std::string>();
+    }
+}
+
+[[nodiscard]] bool require_string(const nlohmann::json& item,
+                                  std::string_view key,
+                                  std::string& out) noexcept {
+    const auto it = item.find(key);
+    if (it == item.end() || !it->is_string()) {
+        return false;
+    }
+    out = it->get<std::string>();
+    return true;
+}
+
+[[nodiscard]] bool require_integer(const nlohmann::json& item,
+                                   std::string_view key,
+                                   std::int64_t& out) noexcept {
+    const auto it = item.find(key);
+    if (it == item.end() || !it->is_number_integer()) {
+        return false;
+    }
+    out = it->get<std::int64_t>();
+    return true;
+}
+
+void extract_optional_number(const nlohmann::json& item,
+                             std::string_view key,
+                             double& out) noexcept {
+    const auto it = item.find(key);
+    if (it != item.end() && it->is_number()) {
+        out = it->get<double>();
+    }
+}
+
+void extract_optional_unsigned(const nlohmann::json& item,
+                               std::string_view key,
+                               std::size_t& out) noexcept {
+    const auto it = item.find(key);
+    if (it != item.end() && it->is_number_unsigned()) {
+        out = it->get<std::size_t>();
+    }
+}
+
+void extract_optional_bool(const nlohmann::json& item,
+                           std::string_view key,
+                           bool& out) noexcept {
+    const auto it = item.find(key);
+    if (it != item.end() && it->is_boolean()) {
+        out = it->get<bool>();
+    }
+}
+
+[[nodiscard]] bool extract_optional_field_spec(const nlohmann::json& item,
+                                               std::string_view key,
+                                               PlanValidationFieldSpec& out) noexcept {
+    const auto it = item.find(key);
+    if (it == item.end()) {
+        return true;
+    }
+    const auto parsed = validation_field_spec_from_json(*it);
+    if (!parsed.has_value()) {
+        return false;
+    }
+    out = *parsed;
+    return true;
+}
+
+[[nodiscard]] bool extract_optional_hash(const nlohmann::json& item,
+                                         std::string_view key,
+                                         std::array<std::uint8_t, 32>& out) noexcept {
+    const auto it = item.find(key);
+    if (it == item.end()) {
+        return true;
+    }
+    if (!it->is_string() || !hex_to_hash(it->get<std::string>(), out)) {
+        return false;
+    }
+    return true;
+}
+
 [[nodiscard]] std::optional<PlanValidationRule> validation_rule_from_json(
     const nlohmann::json& item) {
     if (!item.is_object()) {
@@ -496,56 +647,20 @@ parameter_assignment_from_json(const nlohmann::json& item) {
     }
     r.field = *parsed_field;
 
-    const auto topic = item.find("topic");
-    if (topic != item.end() && topic->is_string()) {
-        r.topic = topic->get<std::string>();
+    extract_optional_string(item, "topic", r.topic);
+    extract_optional_string(item, "blackboard_key", r.blackboard_key);
+    if (!extract_optional_field_spec(item, "reference_field", r.reference_field)) {
+        return std::nullopt;
     }
-    const auto blackboard_key = item.find("blackboard_key");
-    if (blackboard_key != item.end() && blackboard_key->is_string()) {
-        r.blackboard_key = blackboard_key->get<std::string>();
-    }
-    const auto reference_field = item.find("reference_field");
-    if (reference_field != item.end()) {
-        const auto parsed_ref = validation_field_spec_from_json(*reference_field);
-        if (!parsed_ref.has_value()) {
-            return std::nullopt;
-        }
-        r.reference_field = *parsed_ref;
-    }
-    const auto constant = item.find("constant");
-    if (constant != item.end() && constant->is_number()) {
-        r.constant = constant->get<double>();
-    }
-    const auto has_constant = item.find("has_constant");
-    if (has_constant != item.end() && has_constant->is_boolean()) {
-        r.has_constant = has_constant->get<bool>();
-    }
-    const auto constant_string = item.find("constant_string");
-    if (constant_string != item.end() && constant_string->is_string()) {
-        r.constant_string = constant_string->get<std::string>();
-    }
-    const auto is_blackboard_rule = item.find("is_blackboard_rule");
-    if (is_blackboard_rule != item.end() && is_blackboard_rule->is_boolean()) {
-        r.is_blackboard_rule = is_blackboard_rule->get<bool>();
-    }
-    const auto reason_template = item.find("reason_template");
-    if (reason_template != item.end() && reason_template->is_string()) {
-        r.reason_template = reason_template->get<std::string>();
-    }
-    const auto element_size = item.find("element_size");
-    if (element_size != item.end() && element_size->is_number_unsigned()) {
-        r.element_size = element_size->get<std::size_t>();
-    }
-    const auto max_count = item.find("max_count");
-    if (max_count != item.end() && max_count->is_number_unsigned()) {
-        r.max_count = max_count->get<std::size_t>();
-    }
-    const auto layout_hash = item.find("layout_hash");
-    if (layout_hash != item.end()) {
-        if (!layout_hash->is_string() ||
-            !hex_to_hash(layout_hash->get<std::string>(), r.layout_hash)) {
-            return std::nullopt;
-        }
+    extract_optional_number(item, "constant", r.constant);
+    extract_optional_bool(item, "has_constant", r.has_constant);
+    extract_optional_string(item, "constant_string", r.constant_string);
+    extract_optional_bool(item, "is_blackboard_rule", r.is_blackboard_rule);
+    extract_optional_string(item, "reason_template", r.reason_template);
+    extract_optional_unsigned(item, "element_size", r.element_size);
+    extract_optional_unsigned(item, "max_count", r.max_count);
+    if (!extract_optional_hash(item, "layout_hash", r.layout_hash)) {
+        return std::nullopt;
     }
     return r;
 }
@@ -574,14 +689,27 @@ parameter_assignment_from_json(const nlohmann::json& item) {
         return std::nullopt;
     }
     o.enabled = enabled->get<bool>();
-    for (const auto& item : *rules) {
-        const auto parsed = validation_rule_from_json(item);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        o.rules.push_back(*parsed);
+    if (!parse_array(*rules, o.rules, validation_rule_from_json)) {
+        return std::nullopt;
     }
     return o;
+}
+
+[[nodiscard]] bool parse_version(const nlohmann::json& obj,
+                                 std::uint32_t& major,
+                                 std::uint32_t& minor) noexcept {
+    const auto major_it = obj.find("version_major");
+    if (major_it == obj.end() || !major_it->is_number_unsigned()) {
+        return false;
+    }
+    major = major_it->get<std::uint32_t>();
+
+    const auto minor_it = obj.find("version_minor");
+    if (minor_it == obj.end() || !minor_it->is_number_unsigned()) {
+        return false;
+    }
+    minor = minor_it->get<std::uint32_t>();
+    return true;
 }
 
 } // namespace
@@ -643,129 +771,22 @@ std::optional<DomePlan> DomePlan::from_json(std::string_view json) {
 
     DomePlan plan;
 
-    const auto version_major_it = obj.find("version_major");
-    if (version_major_it == obj.end() || !version_major_it->is_number_unsigned()) {
+    if (!parse_version(obj, plan.version_major, plan.version_minor) ||
+        !parse_required_section(obj, "chronos", plan.chronos, chronos_config_from_json) ||
+        !parse_required_array(obj, "partitions", plan.partitions, partition_from_json) ||
+        !parse_required_array(obj, "let_boundaries", plan.let_boundaries,
+                              let_boundary_from_json) ||
+        !parse_required_array(obj, "wires", plan.wires, wire_from_json) ||
+        !parse_required_array(obj, "processes", plan.processes, process_from_json) ||
+        !parse_optional_array(obj, "thread_role_assignments", plan.thread_role_assignments,
+                              thread_role_assignment_from_json) ||
+        !parse_optional_array(obj, "parameter_assignments", plan.parameter_assignments,
+                              parameter_assignment_from_json) ||
+        !parse_optional_section(obj, "recording", plan.recording, recording_options_from_json) ||
+        !parse_optional_section(obj, "replay", plan.replay, replay_options_from_json) ||
+        !parse_optional_section(obj, "validation", plan.validation,
+                                validation_options_from_json)) {
         return std::nullopt;
-    }
-    plan.version_major = version_major_it->get<std::uint32_t>();
-
-    const auto version_minor_it = obj.find("version_minor");
-    if (version_minor_it == obj.end() || !version_minor_it->is_number_unsigned()) {
-        return std::nullopt;
-    }
-    plan.version_minor = version_minor_it->get<std::uint32_t>();
-
-    const auto chronos_it = obj.find("chronos");
-    if (chronos_it == obj.end()) {
-        return std::nullopt;
-    }
-    const auto parsed_chronos = chronos_config_from_json(*chronos_it);
-    if (!parsed_chronos.has_value()) {
-        return std::nullopt;
-    }
-    plan.chronos = *parsed_chronos;
-
-    const auto partitions_it = obj.find("partitions");
-    if (partitions_it == obj.end() || !partitions_it->is_array()) {
-        return std::nullopt;
-    }
-    for (const auto& item : *partitions_it) {
-        const auto parsed = partition_from_json(item);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.partitions.push_back(*parsed);
-    }
-
-    const auto boundaries_it = obj.find("let_boundaries");
-    if (boundaries_it == obj.end() || !boundaries_it->is_array()) {
-        return std::nullopt;
-    }
-    for (const auto& item : *boundaries_it) {
-        const auto parsed = let_boundary_from_json(item);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.let_boundaries.push_back(*parsed);
-    }
-
-    const auto wires_it = obj.find("wires");
-    if (wires_it == obj.end() || !wires_it->is_array()) {
-        return std::nullopt;
-    }
-    for (const auto& item : *wires_it) {
-        const auto parsed = wire_from_json(item);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.wires.push_back(*parsed);
-    }
-
-    const auto processes_it = obj.find("processes");
-    if (processes_it == obj.end() || !processes_it->is_array()) {
-        return std::nullopt;
-    }
-    for (const auto& item : *processes_it) {
-        const auto parsed = process_from_json(item);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.processes.push_back(*parsed);
-    }
-
-    const auto thread_roles_it = obj.find("thread_role_assignments");
-    if (thread_roles_it != obj.end()) {
-        if (!thread_roles_it->is_array()) {
-            return std::nullopt;
-        }
-        for (const auto& item : *thread_roles_it) {
-            const auto parsed = thread_role_assignment_from_json(item);
-            if (!parsed.has_value()) {
-                return std::nullopt;
-            }
-            plan.thread_role_assignments.push_back(*parsed);
-        }
-    }
-
-    const auto parameters_it = obj.find("parameter_assignments");
-    if (parameters_it != obj.end()) {
-        if (!parameters_it->is_array()) {
-            return std::nullopt;
-        }
-        for (const auto& item : *parameters_it) {
-            const auto parsed = parameter_assignment_from_json(item);
-            if (!parsed.has_value()) {
-                return std::nullopt;
-            }
-            plan.parameter_assignments.push_back(*parsed);
-        }
-    }
-
-    const auto recording_it = obj.find("recording");
-    if (recording_it != obj.end()) {
-        const auto parsed = recording_options_from_json(*recording_it);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.recording = *parsed;
-    }
-
-    const auto replay_it = obj.find("replay");
-    if (replay_it != obj.end()) {
-        const auto parsed = replay_options_from_json(*replay_it);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.replay = *parsed;
-    }
-
-    const auto validation_it = obj.find("validation");
-    if (validation_it != obj.end()) {
-        const auto parsed = validation_options_from_json(*validation_it);
-        if (!parsed.has_value()) {
-            return std::nullopt;
-        }
-        plan.validation = *parsed;
     }
 
     return plan;

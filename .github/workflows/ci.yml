@@ -120,15 +120,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      # CMake dependency cache disabled while diagnosing configure failures.
-      # - name: Cache CMake dependencies
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: |
-      #       ${{ matrix.build-dir }}/_deps
-      #     key: ${{ runner.os }}-${{ matrix.name }}-deps-v2-${{ hashFiles('CMakeLists.txt') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-${{ matrix.name }}-deps-v2-
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ matrix.build-dir }}/_deps
+          key: ${{ runner.os }}-${{ matrix.name }}-deps-v2-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.name }}-deps-v2-
 
       - name: Create temp directory
         run: mkdir -p /tmp/opencode

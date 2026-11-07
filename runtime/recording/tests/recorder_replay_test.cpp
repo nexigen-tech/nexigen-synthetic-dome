@@ -25,10 +25,44 @@ static std::array<std::uint8_t, 32> zero_hash() noexcept {
     return h;
 }
 
-static int record_and_replay_test() {
-    const char* path = "/tmp/opencode/recorder_replay_test.mcap";
-    const auto hash = zero_hash();
+static bool publish_sample(transport::Publisher* pub,
+                           const TestSignal& sample,
+                           std::uint32_t sequence,
+                           std::int64_t sim_time_ns) {
+    auto loan = pub->loan();
+    if (!loan.valid() || loan.data == nullptr) {
+        return false;
+    }
+    std::memcpy(loan.data, &sample, sizeof(TestSignal));
+    transport::SampleMetadata meta{};
+    meta.sim_time_ns = sim_time_ns;
+    meta.sequence = sequence;
+    pub->publish(meta);
+    return true;
+}
 
+static bool verify_replayed_sample(transport::Subscriber* sub,
+                                   const TestSignal& expected,
+                                   std::uint32_t expected_sequence,
+                                   std::int64_t expected_sim_time_ns) {
+    auto view = sub->take();
+    if (!view.valid() || view.data == nullptr) {
+        return false;
+    }
+    if (view.metadata.sequence != expected_sequence) {
+        return false;
+    }
+    if (view.metadata.sim_time_ns != expected_sim_time_ns) {
+        return false;
+    }
+    TestSignal out{};
+    std::memcpy(&out, view.data, sizeof(TestSignal));
+    return out.value == expected.value && out.seq == expected.seq;
+}
+
+static int record_test_samples(const char* path,
+                               const std::array<std::uint8_t, 32>& hash,
+                               const TestSignal samples[4]) {
     transport::HeadlessTransport transport;
     recording::Recorder recorder(transport, path);
     if (!recorder.register_topic("test.signal", sizeof(TestSignal), 1, hash, "TestSignal@1.0.0")) {
@@ -43,23 +77,11 @@ static int record_and_replay_test() {
         return 3;
     }
 
-    const TestSignal samples[4] = {
-        {1.0f, 10},
-        {2.0f, 20},
-        {3.0f, 30},
-        {4.0f, 40},
-    };
-
     for (int i = 0; i < 4; ++i) {
-        auto loan = pub->loan();
-        if (!loan.valid() || loan.data == nullptr) {
+        if (!publish_sample(pub, samples[i], static_cast<std::uint32_t>(i + 1),
+                            static_cast<std::int64_t>(i + 1) * 100)) {
             return 4;
         }
-        std::memcpy(loan.data, &samples[i], sizeof(TestSignal));
-        transport::SampleMetadata meta{};
-        meta.sim_time_ns = static_cast<std::int64_t>(i + 1) * 100;
-        meta.sequence = static_cast<std::uint32_t>(i + 1);
-        pub->publish(meta);
         recorder.poll();
     }
 
@@ -67,6 +89,12 @@ static int record_and_replay_test() {
         return 5;
     }
 
+    return 0;
+}
+
+static int replay_and_verify_samples(const char* path,
+                                     const std::array<std::uint8_t, 32>& hash,
+                                     const TestSignal samples[4]) {
     transport::HeadlessTransport replay_transport;
     recording::ReplaySource replay(replay_transport, path);
     if (!replay.load()) {
@@ -91,21 +119,8 @@ static int record_and_replay_test() {
             return 20 + i;
         }
 
-        auto view = sub->take();
-        if (!view.valid() || view.data == nullptr) {
+        if (!verify_replayed_sample(sub, samples[i], static_cast<std::uint32_t>(i), t)) {
             return 30 + i;
-        }
-        if (view.metadata.sequence != static_cast<std::uint32_t>(i)) {
-            return 40 + i;
-        }
-        if (view.metadata.sim_time_ns != t) {
-            return 50 + i;
-        }
-
-        TestSignal out{};
-        std::memcpy(&out, view.data, sizeof(TestSignal));
-        if (out.value != samples[i].value || out.seq != samples[i].seq) {
-            return 60 + i;
         }
 
         if (i == 1) {
@@ -136,6 +151,27 @@ static int record_and_replay_test() {
     replay.control(stop_cmd);
     if (replay.is_playing()) {
         return 74;
+    }
+
+    return 0;
+}
+
+static int record_and_replay_test() {
+    const char* path = "/tmp/opencode/recorder_replay_test.mcap";
+    const auto hash = zero_hash();
+
+    const TestSignal samples[4] = {
+        {1.0f, 10},
+        {2.0f, 20},
+        {3.0f, 30},
+        {4.0f, 40},
+    };
+
+    if (int rc = record_test_samples(path, hash, samples); rc != 0) {
+        return rc;
+    }
+    if (int rc = replay_and_verify_samples(path, hash, samples); rc != 0) {
+        return rc;
     }
 
     return 0;

@@ -46,38 +46,30 @@ int test_write_data_end() {
     return 0;
 }
 
-int test_write_attachment_index_group() {
-    const auto path = make_temp_path();
-    std::uint64_t group_start = 0;
-    std::uint64_t group_length = 0;
-    {
-        auto writer = open_writer(path);
-        AttachmentEntry entry{};
-        entry.name = "attachment-name";
-        entry.media_type = "text/plain";
-        entry.log_time = 10;
-        entry.create_time = 20;
-        entry.data_size = 5;
-        entry.file_offset = 100;
-        entry.length = 50;
-        writer.attachments.push_back(entry);
-        if (!writer.write_attachment_index_group(group_start, group_length)) return 1;
-    }
-    if (group_start != 0) return 2;
+static AttachmentEntry make_sample_attachment_entry() {
+    AttachmentEntry entry{};
+    entry.name = "attachment-name";
+    entry.media_type = "text/plain";
+    entry.log_time = 10;
+    entry.create_time = 20;
+    entry.data_size = 5;
+    entry.file_offset = 100;
+    entry.length = 50;
+    return entry;
+}
 
-    auto reader = open_reader(path);
+static int read_and_verify_attachment_index_header(ReaderImpl& reader,
+                                                   std::uint64_t expected_body_size) {
     std::uint8_t opcode = 0;
     std::uint64_t body_size = 0;
-    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 3;
-    if (opcode != kOpAttachmentIndex) return 4;
+    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 1;
+    if (opcode != kOpAttachmentIndex) return 2;
+    if (body_size != expected_body_size) return 3;
+    return 0;
+}
 
-    const std::uint64_t expected_body_size =
-        sizeof(std::uint64_t) * 5 +
-        sizeof(std::uint32_t) * 2 +
-        std::string("attachment-name").size() +
-        std::string("text/plain").size();
-    if (body_size != expected_body_size) return 5;
-
+static int read_and_verify_attachment_index_fields(ReaderImpl& reader,
+                                                   const AttachmentEntry& expected) {
     std::uint64_t file_offset = 0;
     std::uint64_t length = 0;
     std::uint64_t log_time = 0;
@@ -88,11 +80,41 @@ int test_write_attachment_index_group() {
     if (!reader.read_u64(file_offset) || !reader.read_u64(length) || !reader.read_u64(log_time) ||
         !reader.read_u64(create_time) || !reader.read_u64(data_size) || !reader.read_string(name) ||
         !reader.read_string(media_type)) {
-        return 6;
+        return 1;
     }
-    if (file_offset != 100 || length != 50 || log_time != 10 || create_time != 20 || data_size != 5 ||
-        name != "attachment-name" || media_type != "text/plain") {
-        return 7;
+    if (file_offset != expected.file_offset || length != expected.length ||
+        log_time != expected.log_time || create_time != expected.create_time ||
+        data_size != expected.data_size || name != expected.name || media_type != expected.media_type) {
+        return 2;
+    }
+    return 0;
+}
+
+int test_write_attachment_index_group() {
+    const auto path = make_temp_path();
+    std::uint64_t group_start = 0;
+    std::uint64_t group_length = 0;
+    const auto entry = make_sample_attachment_entry();
+    {
+        auto writer = open_writer(path);
+        writer.attachments.push_back(entry);
+        if (!writer.write_attachment_index_group(group_start, group_length)) return 1;
+    }
+    if (group_start != 0) return 2;
+
+    auto reader = open_reader(path);
+
+    const std::uint64_t expected_body_size =
+        sizeof(std::uint64_t) * 5 +
+        sizeof(std::uint32_t) * 2 +
+        std::string("attachment-name").size() +
+        std::string("text/plain").size();
+
+    if (int rc = read_and_verify_attachment_index_header(reader, expected_body_size); rc != 0) {
+        return 10 + rc;
+    }
+    if (int rc = read_and_verify_attachment_index_fields(reader, entry); rc != 0) {
+        return 20 + rc;
     }
     if (group_length != expected_body_size + kRecordHeaderSize) return 8;
     std::filesystem::remove(path);
@@ -113,6 +135,52 @@ int test_write_attachment_index_group_empty() {
     return 0;
 }
 
+static int read_and_verify_statistics_header(ReaderImpl& reader,
+                                             std::uint64_t expected_body_size) {
+    std::uint8_t opcode = 0;
+    std::uint64_t body_size = 0;
+    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 1;
+    if (opcode != kOpStatistics) return 2;
+    if (body_size != expected_body_size) return 3;
+    return 0;
+}
+
+static int read_and_verify_statistics_counts(ReaderImpl& reader,
+                                             std::uint64_t expected_message_count,
+                                             std::uint32_t expected_attachment_count) {
+    Statistics stats{};
+    std::uint32_t metadata_count = 0;
+    std::uint32_t chunk_count = 0;
+    if (!reader.read_u64(stats.message_count) || !reader.read_u16(stats.schema_count) ||
+        !reader.read_u32(stats.channel_count) || !reader.read_u32(stats.attachment_count) ||
+        !reader.read_u32(metadata_count) || !reader.read_u32(chunk_count)) {
+        return 1;
+    }
+    if (stats.message_count != expected_message_count || stats.schema_count != 0 ||
+        stats.channel_count != 0 || stats.attachment_count != expected_attachment_count ||
+        metadata_count != 0 || chunk_count != 0) {
+        return 2;
+    }
+    return 0;
+}
+
+static int read_and_verify_statistics_times(ReaderImpl& reader,
+                                            std::uint64_t expected_start_time,
+                                            std::uint64_t expected_end_time) {
+    std::uint64_t message_start_time = 0;
+    std::uint64_t message_end_time = 0;
+    std::uint32_t channel_counts = 0;
+    if (!reader.read_u64(message_start_time) || !reader.read_u64(message_end_time) ||
+        !reader.read_u32(channel_counts)) {
+        return 1;
+    }
+    if (message_start_time != expected_start_time || message_end_time != expected_end_time ||
+        channel_counts != 0) {
+        return 2;
+    }
+    return 0;
+}
+
 int test_write_statistics() {
     const auto path = make_temp_path();
     std::uint64_t group_start = 0;
@@ -128,36 +196,46 @@ int test_write_statistics() {
     if (group_start != 0) return 2;
 
     auto reader = open_reader(path);
-    std::uint8_t opcode = 0;
-    std::uint64_t body_size = 0;
-    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 3;
-    if (opcode != kOpStatistics) return 4;
 
     const std::uint64_t expected_body_size =
         sizeof(std::uint64_t) +     // message_count
         sizeof(std::uint16_t) +     // schema_count
         sizeof(std::uint32_t) * 5 + // channel, attachment, metadata, chunk, channel_counts counts
         sizeof(std::uint64_t) * 2;  // start/end times
-    if (body_size != expected_body_size) return 5;
 
-    Statistics stats{};
-    std::uint32_t metadata_count = 0;
-    std::uint32_t chunk_count = 0;
-    std::uint32_t channel_counts = 1;
-    if (!reader.read_u64(stats.message_count) || !reader.read_u16(stats.schema_count) ||
-        !reader.read_u32(stats.channel_count) || !reader.read_u32(stats.attachment_count) ||
-        !reader.read_u32(metadata_count) || !reader.read_u32(chunk_count) ||
-        !reader.read_u64(stats.message_start_time) || !reader.read_u64(stats.message_end_time) ||
-        !reader.read_u32(channel_counts)) {
-        return 6;
+    if (int rc = read_and_verify_statistics_header(reader, expected_body_size); rc != 0) {
+        return 10 + rc;
     }
-    if (stats.message_count != 100 || stats.schema_count != 0 || stats.channel_count != 0 ||
-        stats.attachment_count != 1 || metadata_count != 0 || chunk_count != 0 ||
-        stats.message_start_time != 10 || stats.message_end_time != 20 || channel_counts != 0) {
-        return 7;
+    if (int rc = read_and_verify_statistics_counts(reader, 100, 1); rc != 0) {
+        return 20 + rc;
+    }
+    if (int rc = read_and_verify_statistics_times(reader, 10, 20); rc != 0) {
+        return 30 + rc;
     }
     if (group_length != expected_body_size + kRecordHeaderSize) return 8;
     std::filesystem::remove(path);
+    return 0;
+}
+
+static int read_and_verify_summary_offset(ReaderImpl& reader,
+                                          std::uint8_t expected_opcode,
+                                          std::uint64_t expected_start,
+                                          std::uint64_t expected_length) {
+    std::uint8_t opcode = 0;
+    std::uint64_t body_size = 0;
+    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 1;
+    if (opcode != kOpSummaryOffset) return 2;
+    std::uint8_t record_opcode = 0;
+    std::uint64_t record_start = 0;
+    std::uint64_t record_length = 0;
+    if (!reader.read_u8(record_opcode) || !reader.read_u64(record_start) ||
+        !reader.read_u64(record_length)) {
+        return 3;
+    }
+    if (record_opcode != expected_opcode || record_start != expected_start ||
+        record_length != expected_length) {
+        return 4;
+    }
     return 0;
 }
 
@@ -169,34 +247,13 @@ int test_write_summary_offsets_with_attachment() {
         if (!writer.write_summary_offsets(10, 100, 20, 200)) return 1;
     }
     auto reader = open_reader(path);
-    std::uint8_t opcode = 0;
-    std::uint64_t body_size = 0;
 
-    // AttachmentIndex summary offset
-    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 2;
-    if (opcode != kOpSummaryOffset) return 3;
-    std::uint8_t attachment_opcode = 0;
-    std::uint64_t attachment_start = 0;
-    std::uint64_t attachment_length = 0;
-    if (!reader.read_u8(attachment_opcode) || !reader.read_u64(attachment_start) ||
-        !reader.read_u64(attachment_length)) {
-        return 4;
+    if (int rc = read_and_verify_summary_offset(reader, kOpAttachmentIndex, 10, 100); rc != 0) {
+        return 10 + rc;
     }
-    if (attachment_opcode != kOpAttachmentIndex || attachment_start != 10 || attachment_length != 100) {
-        return 5;
+    if (int rc = read_and_verify_summary_offset(reader, kOpStatistics, 20, 200); rc != 0) {
+        return 20 + rc;
     }
-
-    // Statistics summary offset
-    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 6;
-    if (opcode != kOpSummaryOffset) return 7;
-    std::uint8_t stats_opcode = 0;
-    std::uint64_t stats_start = 0;
-    std::uint64_t stats_length = 0;
-    if (!reader.read_u8(stats_opcode) || !reader.read_u64(stats_start) ||
-        !reader.read_u64(stats_length)) {
-        return 8;
-    }
-    if (stats_opcode != kOpStatistics || stats_start != 20 || stats_length != 200) return 9;
 
     std::filesystem::remove(path);
     return 0;
@@ -209,18 +266,9 @@ int test_write_summary_offsets_without_attachment() {
         if (!writer.write_summary_offsets(10, 100, 20, 200)) return 1;
     }
     auto reader = open_reader(path);
-    std::uint8_t opcode = 0;
-    std::uint64_t body_size = 0;
-    if (!reader.read_u8(opcode) || !reader.read_u64(body_size)) return 2;
-    if (opcode != kOpSummaryOffset) return 3;
-    std::uint8_t stats_opcode = 0;
-    std::uint64_t stats_start = 0;
-    std::uint64_t stats_length = 0;
-    if (!reader.read_u8(stats_opcode) || !reader.read_u64(stats_start) ||
-        !reader.read_u64(stats_length)) {
-        return 4;
+    if (int rc = read_and_verify_summary_offset(reader, kOpStatistics, 20, 200); rc != 0) {
+        return 10 + rc;
     }
-    if (stats_opcode != kOpStatistics || stats_start != 20 || stats_length != 200) return 5;
     std::filesystem::remove(path);
     return 0;
 }

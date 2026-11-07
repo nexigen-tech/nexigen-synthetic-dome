@@ -71,36 +71,58 @@ namespace composer = nxd::runtime::composer;
 })";
 }
 
-int main() {
-    const auto manifest = composer::SystemManifest::from_json(basic_manifest());
-    if (!manifest.has_value()) return 1;
+static bool parsed_manifest_has_expected_structure(const composer::SystemManifest& m) {
+    if (m.components.size() != 2) return false;
+    if (m.instances.size() != 2) return false;
+    if (m.partitions.size() != 2) return false;
+    if (m.wires.size() != 1) return false;
+    if (m.let_boundaries.size() != 1) return false;
+    if (m.processes.size() != 1) return false;
+    return true;
+}
 
-    if (manifest->components.size() != 2) return 2;
-    if (manifest->instances.size() != 2) return 3;
-    if (manifest->partitions.size() != 2) return 4;
-    if (manifest->wires.size() != 1) return 5;
-    if (manifest->let_boundaries.size() != 1) return 6;
-    if (manifest->processes.size() != 1) return 7;
+static bool parsed_manifest_has_expected_pid_instance(const composer::SystemManifest& m) {
+    if (m.instances[0].id != "pid_1") return false;
+    if (m.instances[0].partition_id != 1) return false;
+    if (m.instances[0].parameters.size() != 1) return false;
+    if (m.instances[0].parameters[0].name != "kp") return false;
+    if (m.instances[0].parameters[0].value != 10) return false;
+    if (m.instances[0].thread_roles[0].role != "control") return false;
+    return true;
+}
 
-    if (manifest->instances[0].id != "pid_1") return 10;
-    if (manifest->instances[0].partition_id != 1) return 11;
-    if (manifest->instances[0].parameters.size() != 1) return 12;
-    if (manifest->instances[0].parameters[0].name != "kp") return 13;
-    if (manifest->instances[0].parameters[0].value != 10) return 14;
-    if (manifest->instances[0].thread_roles[0].role != "control") return 15;
-
-    const auto& boundary_id = manifest->wires[0].let_boundary_id;
+static bool parsed_manifest_has_expected_wire_and_boundary(const composer::SystemManifest& m) {
+    const auto& boundary_id = m.wires[0].let_boundary_id;
     if (!boundary_id.has_value() || boundary_id.value() != "control_to_plant") {
-        return 21;
+        return false;
     }
+    if (m.let_boundaries[0].write_deadline_ns != 200'000) return false;
+    return true;
+}
 
-    if (manifest->let_boundaries[0].write_deadline_ns != 200'000) return 30;
+static bool test_basic_manifest_parses() {
+    const auto manifest = composer::SystemManifest::from_json(basic_manifest());
+    if (!manifest.has_value()) return false;
+    if (!parsed_manifest_has_expected_structure(*manifest)) return false;
+    if (!parsed_manifest_has_expected_pid_instance(*manifest)) return false;
+    if (!parsed_manifest_has_expected_wire_and_boundary(*manifest)) return false;
+    return true;
+}
 
-    // Invalid JSON is rejected.
-    if (composer::SystemManifest::from_json("{not json").has_value()) return 40;
+static bool test_invalid_json_rejected() {
+    if (composer::SystemManifest::from_json("{not json").has_value()) return false;
+    return true;
+}
 
-    // Missing required field is rejected.
-    if (composer::SystemManifest::from_json("{}").has_value()) return 41;
+static bool test_missing_required_field_rejected() {
+    if (composer::SystemManifest::from_json("{}").has_value()) return false;
+    return true;
+}
+
+int main() {
+    if (!test_basic_manifest_parses()) return 1;
+    if (!test_invalid_json_rejected()) return 2;
+    if (!test_missing_required_field_rejected()) return 3;
 
     return 0;
 }

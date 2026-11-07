@@ -15,7 +15,7 @@
 
 namespace composer = nxd::runtime::composer;
 
-int main() {
+static composer::SystemManifest make_sample_manifest() {
     composer::SystemManifest manifest{};
     manifest.components.push_back(composer::ComponentRef{"pid", "pid.nxdd"});
 
@@ -59,34 +59,63 @@ int main() {
         .scale_factor = 1,
     };
 
-    std::unordered_map<std::string, nxd::host::ComponentDescriptor> descriptors;
-    const auto plan = composer::emit_plan(manifest, descriptors);
+    return manifest;
+}
 
-    if (plan.version_major != composer::dome_plan_version_major) return 1;
-    if (plan.version_minor != composer::dome_plan_version_minor) return 2;
-    if (plan.chronos.mode != 3) return 3;
-    if (plan.partitions.size() != 1 || plan.partitions[0].id != 1) return 4;
-    if (plan.let_boundaries.size() != 1 || plan.let_boundaries[0].id != "l1") return 5;
-    if (plan.wires.size() != 1) return 6;
+static composer::DomePlan emit_sample_plan() {
+    const auto manifest = make_sample_manifest();
+    std::unordered_map<std::string, nxd::host::ComponentDescriptor> descriptors;
+    return composer::emit_plan(manifest, descriptors);
+}
+
+static bool test_emitted_plan_has_expected_header_and_partition() {
+    const auto plan = emit_sample_plan();
+    if (plan.version_major != composer::dome_plan_version_major) return false;
+    if (plan.version_minor != composer::dome_plan_version_minor) return false;
+    if (plan.chronos.mode != 3) return false;
+    if (plan.partitions.size() != 1 || plan.partitions[0].id != 1) return false;
+    return true;
+}
+
+static bool test_emitted_plan_has_expected_boundary_and_wires() {
+    const auto plan = emit_sample_plan();
+    if (plan.let_boundaries.size() != 1 || plan.let_boundaries[0].id != "l1") return false;
+    if (plan.wires.size() != 1) return false;
+    return true;
+}
+
+static bool test_emitted_plan_has_expected_process_and_assignments() {
+    const auto plan = emit_sample_plan();
     if (plan.processes.size() != 1 || plan.processes[0].executable != "./nxd_process") {
-        return 7;
+        return false;
     }
     if (plan.thread_role_assignments.size() != 1 ||
         plan.thread_role_assignments[0].role != "control" ||
         plan.thread_role_assignments[0].thread != "t0") {
-        return 8;
+        return false;
     }
     if (plan.parameter_assignments.size() != 1 ||
         plan.parameter_assignments[0].name != "kp" ||
         plan.parameter_assignments[0].value != 42) {
-        return 9;
+        return false;
     }
+    return true;
+}
 
-    // Round-trip through JSON preserves the emitted plan.
+static bool test_plan_round_trips_through_json() {
+    const auto plan = emit_sample_plan();
     const auto json = plan.to_json();
     const auto parsed = composer::DomePlan::from_json(json);
-    if (!parsed.has_value()) return 10;
-    if (*parsed != plan) return 11;
+    if (!parsed.has_value()) return false;
+    if (*parsed != plan) return false;
+    return true;
+}
+
+int main() {
+    if (!test_emitted_plan_has_expected_header_and_partition()) return 1;
+    if (!test_emitted_plan_has_expected_boundary_and_wires()) return 2;
+    if (!test_emitted_plan_has_expected_process_and_assignments()) return 3;
+    if (!test_plan_round_trips_through_json()) return 4;
 
     return 0;
 }

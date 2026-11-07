@@ -242,190 +242,183 @@ namespace composer = nxd::runtime::composer;
     return m;
 }
 
-int main() {
+static std::unordered_map<std::string, nxd::host::ComponentDescriptor> make_base_descriptors() {
     std::unordered_map<std::string, nxd::host::ComponentDescriptor> descriptors;
     descriptors.emplace("pid", make_pid_descriptor());
     descriptors.emplace("plant", make_plant_descriptor());
+    return descriptors;
+}
 
-    // Valid manifest passes.
-    {
-        const auto m = make_valid_manifest();
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (!diagnostics.empty()) return 1;
-    }
+static bool test_valid_manifest_passes() {
+    const auto m = make_valid_manifest();
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    return diagnostics.empty();
+}
 
-    // Missing required port binding.
-    {
-        auto m = make_valid_manifest();
-        m.wires.clear();
-        m.let_boundaries.clear();
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 2) return 10; // pid command + plant setpoint
-    }
+static bool test_missing_required_port_binding() {
+    auto m = make_valid_manifest();
+    m.wires.clear();
+    m.let_boundaries.clear();
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    return diagnostics.size() == 2; // pid command + plant setpoint
+}
 
-    // Missing required parameter.
-    {
-        auto m = make_valid_manifest();
-        m.instances[0].parameters.clear();
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 1) return 20;
-        if (diagnostics[0].component_instance != "pid_1") return 21;
-    }
+static bool test_missing_required_parameter() {
+    auto m = make_valid_manifest();
+    m.instances[0].parameters.clear();
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].component_instance == "pid_1";
+}
 
-    // Parameter out of range.
-    {
-        auto m = make_valid_manifest();
-        m.instances[0].parameters[0].value = 200;
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 1) return 30;
-        if (diagnostics[0].message.find("above maximum") == std::string::npos) return 31;
-    }
+static bool test_parameter_out_of_range() {
+    auto m = make_valid_manifest();
+    m.instances[0].parameters[0].value = 200;
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("above maximum") != std::string::npos;
+}
 
-    // Missing required thread role.
-    {
-        auto m = make_valid_manifest();
-        m.instances[0].thread_roles.clear();
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 1) return 40;
-        if (diagnostics[0].role != "control") return 41;
-    }
+static bool test_missing_required_thread_role() {
+    auto m = make_valid_manifest();
+    m.instances[0].thread_roles.clear();
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].role == "control";
+}
 
-    // Unsupported chronos mode for pid (pid does not support realtime_hil).
-    {
-        auto m = make_valid_manifest();
-        m.chronos.mode = 0; // realtime_hil
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 1) return 50;
-        if (diagnostics[0].component_name != "pid") return 51;
-    }
+static bool test_unsupported_chronos_mode() {
+    auto m = make_valid_manifest();
+    m.chronos.mode = 0; // realtime_hil
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].component_name == "pid";
+}
 
-    // Wire references unknown instance.
-    {
-        auto m = make_valid_manifest();
-        m.wires[0].target_instance = "missing";
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 2) return 60;
-        bool found_unknown_target = false;
-        for (const auto& d : diagnostics) {
-            if (d.message.find("unknown target instance") != std::string::npos) {
-                found_unknown_target = true;
-            }
-        }
-        if (!found_unknown_target) return 61;
-    }
-
-    // Incompatible contracts between ports.
-    {
-        auto bad_descriptors = descriptors;
-        bad_descriptors["bad_plant"] = make_bad_contract_plant();
-
-        auto m = make_valid_manifest();
-        m.instances[1].component_name = "bad_plant";
-        const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
-        if (diagnostics.size() != 1) return 70;
-        if (diagnostics[0].message.find("incompatible contracts") == std::string::npos) return 71;
-    }
-
-    // Incompatible contract layout hash between ports.
-    {
-        auto bad_descriptors = descriptors;
-        bad_descriptors["bad_hash_plant"] = make_bad_hash_plant();
-
-        auto m = make_valid_manifest();
-        m.instances[1].component_name = "bad_hash_plant";
-        const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
-        if (diagnostics.size() != 1) return 80;
-        if (diagnostics[0].message.find("layout hash mismatch") == std::string::npos) return 81;
-        if (diagnostics[0].message.find("pid_1.command") == std::string::npos) return 82;
-        if (diagnostics[0].message.find("plant_1.setpoint") == std::string::npos) return 83;
-    }
-
-    // Missing port layout hash.
-    {
-        auto bad_descriptors = descriptors;
-        bad_descriptors["missing_hash_plant"] = make_missing_hash_plant();
-
-        auto m = make_valid_manifest();
-        m.instances[1].component_name = "missing_hash_plant";
-        const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
-        if (diagnostics.size() != 1) return 85;
-        if (diagnostics[0].message.find("missing contract layout_hash") == std::string::npos) {
-            return 86;
+static bool test_wire_references_unknown_instance() {
+    auto m = make_valid_manifest();
+    m.wires[0].target_instance = "missing";
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 2) return false;
+    for (const auto& d : diagnostics) {
+        if (d.message.find("unknown target instance") != std::string::npos) {
+            return true;
         }
     }
+    return false;
+}
 
-    // Hardware real-time requirement mismatch in non-RT mode.
-    {
-        auto hw_descriptors = descriptors;
-        hw_descriptors["hw"] = make_hardware_rt_descriptor();
+static bool test_incompatible_contracts_between_ports() {
+    auto bad_descriptors = make_base_descriptors();
+    bad_descriptors["bad_plant"] = make_bad_contract_plant();
 
-        auto m = make_valid_manifest();
-        m.instances.push_back(composer::Instance{
-            .id = "hw_1",
-            .component_name = "hw",
-            .partition_id = 1,
-            .parameters = {},
-            .thread_roles = {},
-        });
-        const auto diagnostics = composer::validate_against_descriptors(m, hw_descriptors);
-        if (diagnostics.size() != 1) return 90;
-        if (diagnostics[0].message.find("requires hardware real-time") == std::string::npos) {
-            return 91;
-        }
-    }
+    auto m = make_valid_manifest();
+    m.instances[1].component_name = "bad_plant";
+    const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("incompatible contracts") != std::string::npos;
+}
 
-    // Undeclared thread role assignment.
-    {
-        auto m = make_valid_manifest();
-        m.instances[0].thread_roles.push_back(
-            composer::ThreadRoleAssignment{"missing_role", "t0"});
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 1) return 100;
-        if (diagnostics[0].message.find("undeclared thread role") == std::string::npos) {
-            return 101;
-        }
-        if (diagnostics[0].role != "missing_role") return 102;
-    }
+static bool test_incompatible_layout_hash_between_ports() {
+    auto bad_descriptors = make_base_descriptors();
+    bad_descriptors["bad_hash_plant"] = make_bad_hash_plant();
 
-    // Duplicate thread role assignment within the same instance.
-    {
-        auto m = make_valid_manifest();
-        m.instances[0].thread_roles.push_back(
-            composer::ThreadRoleAssignment{"control", "t1"});
-        const auto diagnostics = composer::validate_against_descriptors(m, descriptors);
-        if (diagnostics.size() != 1) return 110;
-        if (diagnostics[0].message.find("assigned more than once") == std::string::npos) {
-            return 111;
-        }
-    }
+    auto m = make_valid_manifest();
+    m.instances[1].component_name = "bad_hash_plant";
+    const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
+    if (diagnostics.size() != 1) return false;
+    if (diagnostics[0].message.find("layout hash mismatch") == std::string::npos) return false;
+    if (diagnostics[0].message.find("pid_1.command") == std::string::npos) return false;
+    return diagnostics[0].message.find("plant_1.setpoint") != std::string::npos;
+}
 
-    // Thread role mapped to multiple threads across instances.
-    {
-        auto mr_descriptors = descriptors;
-        mr_descriptors["mr"] = make_multi_role_descriptor();
+static bool test_missing_port_layout_hash() {
+    auto bad_descriptors = make_base_descriptors();
+    bad_descriptors["missing_hash_plant"] = make_missing_hash_plant();
 
-        auto m = make_valid_manifest();
-        m.instances.push_back(composer::Instance{
-            .id = "mr_1",
-            .component_name = "mr",
-            .partition_id = 1,
-            .parameters = {},
-            .thread_roles = {composer::ThreadRoleAssignment{"control", "t0"}},
-        });
-        m.instances.push_back(composer::Instance{
-            .id = "mr_2",
-            .component_name = "mr",
-            .partition_id = 2,
-            .parameters = {},
-            .thread_roles = {composer::ThreadRoleAssignment{"control", "t1"}},
-        });
-        const auto diagnostics = composer::validate_against_descriptors(m, mr_descriptors);
-        if (diagnostics.size() != 1) return 120;
-        if (diagnostics[0].message.find("assigned to both") == std::string::npos) {
-            return 121;
-        }
-        if (diagnostics[0].role != "control") return 122;
-    }
+    auto m = make_valid_manifest();
+    m.instances[1].component_name = "missing_hash_plant";
+    const auto diagnostics = composer::validate_against_descriptors(m, bad_descriptors);
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("missing contract layout_hash") != std::string::npos;
+}
+
+static bool test_hardware_rt_requirement_mismatch() {
+    auto hw_descriptors = make_base_descriptors();
+    hw_descriptors["hw"] = make_hardware_rt_descriptor();
+
+    auto m = make_valid_manifest();
+    m.instances.push_back(composer::Instance{
+        .id = "hw_1",
+        .component_name = "hw",
+        .partition_id = 1,
+        .parameters = {},
+        .thread_roles = {},
+    });
+    const auto diagnostics = composer::validate_against_descriptors(m, hw_descriptors);
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("requires hardware real-time") != std::string::npos;
+}
+
+static bool test_undeclared_thread_role_assignment() {
+    auto m = make_valid_manifest();
+    m.instances[0].thread_roles.push_back(
+        composer::ThreadRoleAssignment{"missing_role", "t0"});
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    if (diagnostics[0].message.find("undeclared thread role") == std::string::npos) return false;
+    return diagnostics[0].role == "missing_role";
+}
+
+static bool test_duplicate_thread_role_assignment() {
+    auto m = make_valid_manifest();
+    m.instances[0].thread_roles.push_back(
+        composer::ThreadRoleAssignment{"control", "t1"});
+    const auto diagnostics = composer::validate_against_descriptors(m, make_base_descriptors());
+    if (diagnostics.size() != 1) return false;
+    return diagnostics[0].message.find("assigned more than once") != std::string::npos;
+}
+
+static bool test_thread_role_mapped_to_multiple_threads() {
+    auto mr_descriptors = make_base_descriptors();
+    mr_descriptors["mr"] = make_multi_role_descriptor();
+
+    auto m = make_valid_manifest();
+    m.instances.push_back(composer::Instance{
+        .id = "mr_1",
+        .component_name = "mr",
+        .partition_id = 1,
+        .parameters = {},
+        .thread_roles = {composer::ThreadRoleAssignment{"control", "t0"}},
+    });
+    m.instances.push_back(composer::Instance{
+        .id = "mr_2",
+        .component_name = "mr",
+        .partition_id = 2,
+        .parameters = {},
+        .thread_roles = {composer::ThreadRoleAssignment{"control", "t1"}},
+    });
+    const auto diagnostics = composer::validate_against_descriptors(m, mr_descriptors);
+    if (diagnostics.size() != 1) return false;
+    if (diagnostics[0].message.find("assigned to both") == std::string::npos) return false;
+    return diagnostics[0].role == "control";
+}
+
+int main() {
+    if (!test_valid_manifest_passes()) return 1;
+    if (!test_missing_required_port_binding()) return 2;
+    if (!test_missing_required_parameter()) return 3;
+    if (!test_parameter_out_of_range()) return 4;
+    if (!test_missing_required_thread_role()) return 5;
+    if (!test_unsupported_chronos_mode()) return 6;
+    if (!test_wire_references_unknown_instance()) return 7;
+    if (!test_incompatible_contracts_between_ports()) return 8;
+    if (!test_incompatible_layout_hash_between_ports()) return 9;
+    if (!test_missing_port_layout_hash()) return 10;
+    if (!test_hardware_rt_requirement_mismatch()) return 11;
+    if (!test_undeclared_thread_role_assignment()) return 12;
+    if (!test_duplicate_thread_role_assignment()) return 13;
+    if (!test_thread_role_mapped_to_multiple_threads()) return 14;
 
     return 0;
 }

@@ -95,7 +95,9 @@ jobs:
             libstdc++-13-dev \
             xvfb \
             libgl1-mesa-dev
-          sudo mkdir -p /tmp/opencode
+
+      - name: Create temp directory
+        run: mkdir -p /tmp/opencode
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -124,6 +126,9 @@ jobs:
       #     key: ${{ runner.os }}-${{ matrix.name }}-deps-v2-${{ hashFiles('CMakeLists.txt') }}
       #     restore-keys: |
       #       ${{ runner.os }}-${{ matrix.name }}-deps-v2-
+
+      - name: Create temp directory
+        run: mkdir -p /tmp/opencode
 
       - name: Configure
         run: |

@@ -2,8 +2,8 @@
 
 ## 1. Update CI workflow
 
-- [x] 1.1 Add `sudo mkdir -p /tmp/opencode` to the system dependencies step.
-- [x] 1.2 Place it before the test step so recording tests can write fixtures.
+- [x] 1.1 Add a dedicated step that creates `/tmp/opencode` as the runner user (no sudo) before tests run.
+- [x] 1.2 Ensure the directory is writable by the test process.
 
 ## 2. Validate and push
 
